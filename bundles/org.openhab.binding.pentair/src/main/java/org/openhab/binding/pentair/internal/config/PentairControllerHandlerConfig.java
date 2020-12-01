@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2010-2021 Contributors to the openHAB project
+ * Copyright (c) 2010-2020 Contributors to the openHAB project
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information.
@@ -15,19 +15,14 @@ package org.openhab.binding.pentair.internal.config;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 
 /**
- * Configuration parameters for IP Bridge
+ * Configuration parameters for PentairControllerHandler
  *
  * @author Jeff James - initial contribution
  *
  */
 @NonNullByDefault
-public class PentairIPBridgeConfig {
-    /** IP address of destination */
-    public String address = "";
-    /** Port of destination */
-    public int port = 10000;
-    /** ID to use when sending commands on the Pentair RS485 bus. */
-    public int id = 34;
-    /** enable automatic discovery */
-    public boolean discovery = false;
+public class PentairControllerHandlerConfig {
+    /** ID of thing on the Pentair RS485 bus. */
+    public int id = 0;
+    public boolean synctime = true;
 }

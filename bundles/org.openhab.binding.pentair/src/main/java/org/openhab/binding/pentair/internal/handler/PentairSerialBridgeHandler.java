@@ -12,23 +12,25 @@
  */
 package org.openhab.binding.pentair.internal.handler;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.Objects;
+import java.util.Optional;
 
+import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.binding.pentair.internal.config.PentairSerialBridgeConfig;
+import org.openhab.core.io.transport.serial.PortInUseException;
+import org.openhab.core.io.transport.serial.SerialPort;
+import org.openhab.core.io.transport.serial.SerialPortIdentifier;
+import org.openhab.core.io.transport.serial.SerialPortManager;
+import org.openhab.core.io.transport.serial.UnsupportedCommOperationException;
 import org.openhab.core.thing.Bridge;
 import org.openhab.core.thing.ThingStatus;
 import org.openhab.core.thing.ThingStatusDetail;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import gnu.io.CommPort;
-import gnu.io.CommPortIdentifier;
-import gnu.io.NoSuchPortException;
-import gnu.io.PortInUseException;
-import gnu.io.SerialPort;
-import gnu.io.UnsupportedCommOperationException;
 
 /**
  * Handler for the IPBridge. Implements the connect and disconnect abstract methods of {@link PentairBaseBridgeHandler}
@@ -36,109 +38,99 @@ import gnu.io.UnsupportedCommOperationException;
  * @author Jeff James - initial contribution
  *
  */
+@NonNullByDefault
 public class PentairSerialBridgeHandler extends PentairBaseBridgeHandler {
     private final Logger logger = LoggerFactory.getLogger(PentairSerialBridgeHandler.class);
 
+    public PentairSerialBridgeConfig config = new PentairSerialBridgeConfig();
     /** SerialPort object representing the port where the RS485 adapter is connected */
-    SerialPort port;
+    private final SerialPortManager serialPortManager;
+    private Optional<SerialPort> port = Optional.empty();
+    private @Nullable SerialPortIdentifier portIdentifier;
 
-    public PentairSerialBridgeHandler(Bridge bridge) {
+    public PentairSerialBridgeHandler(Bridge bridge, SerialPortManager serialPortManager) {
         super(bridge);
+        this.serialPortManager = serialPortManager;
     }
 
     @Override
-    protected synchronized void connect() {
-        PentairSerialBridgeConfig configuration = getConfigAs(PentairSerialBridgeConfig.class);
+    protected synchronized int connect() {
+        config = getConfigAs(PentairSerialBridgeConfig.class);
+
+        if (config.serialPort.isEmpty()) {
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, "no serial port configured");
+            return -1;
+        }
+
+        this.id = config.id;
+        logger.debug("Serial port id: {}", id);
+        this.discovery = config.discovery;
+
+        portIdentifier = serialPortManager.getIdentifier(config.serialPort);
+        if (portIdentifier == null) {
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
+                    "Configured serial port does not exist");
+            return -1;
+        }
 
         try {
-            CommPortIdentifier ci = CommPortIdentifier.getPortIdentifier(configuration.serialPort);
-            CommPort cp = ci.open("openhabpentairbridge", 10000);
-            if (cp == null) {
-                throw new IllegalStateException("cannot open serial port!");
+            logger.debug("connect port: {}", config.serialPort);
+
+            Objects.requireNonNull(portIdentifier, "portIdentifier is null");
+            if (portIdentifier.isCurrentlyOwned()) {
+                logger.debug("Serial port is currently being used by another application {}",
+                        portIdentifier.getCurrentOwner());
+                // for debug purposes, will continue to try and open
             }
 
-            if (cp instanceof SerialPort) {
-                port = (SerialPort) cp;
-            } else {
-                throw new IllegalStateException("unknown port type");
-            }
-            port.setSerialPortParams(9600, SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
-            port.disableReceiveFraming();
-            port.disableReceiveThreshold();
+            port = Optional.of(portIdentifier.open("org.openhab.binding.pentair", 10000));
 
-            reader = new BufferedInputStream(port.getInputStream());
-            writer = new BufferedOutputStream(port.getOutputStream());
-            logger.info("Pentair Bridge connected to serial port: {}", configuration.serialPort);
+            if (!port.isPresent()) {
+                return -1;
+            }
+
+            port.get().setSerialPortParams(9600, SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
+            port.get().setFlowControlMode(SerialPort.FLOWCONTROL_NONE);
+
+            InputStream is = port.get().getInputStream();
+            OutputStream os = port.get().getOutputStream();
+
+            if (is != null) {
+                setInputStream(is);
+            }
+
+            if (os != null) {
+                setOutputStream(os);
+            }
         } catch (PortInUseException e) {
-            String msg = String.format("cannot open serial port: %s", configuration.serialPort);
+            String msg = String.format("Serial port already in use: %s", config.serialPort);
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, msg);
-            return;
+            return -1;
         } catch (UnsupportedCommOperationException e) {
-            String msg = String.format("got unsupported operation %s on port %s", e.getMessage(),
-                    configuration.serialPort);
+            String msg = String.format("got unsupported operation %s on port %s", e.getMessage(), config.serialPort);
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, msg);
-            return;
-        } catch (NoSuchPortException e) {
-            String msg = String.format("got no such port for %s", configuration.serialPort);
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, msg);
-            return;
-        } catch (IllegalStateException e) {
-            String msg = String.format("receive IllegalStateException for port %s", configuration.serialPort);
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, msg);
-            return;
+            return -2;
         } catch (IOException e) {
-            String msg = String.format("IOException on port %s", configuration.serialPort);
+            String msg = String.format("got IOException %s on port %s", e.getMessage(), config.serialPort);
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, msg);
-            return;
+            return -2;
         }
 
-        parser = new Parser();
-        thread = new Thread(parser);
-        thread.start();
+        // if you have gotten this far, you should be connected to the serial port
+        logger.debug("Pentair Bridge connected to serial port: {}", config.serialPort);
 
-        if (port != null && reader != null && writer != null) {
-            updateStatus(ThingStatus.ONLINE);
-        } else {
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, "Unable to connect");
-        }
+        updateStatus(ThingStatus.ONLINE);
+
+        return 0;
     }
 
     @Override
     protected synchronized void disconnect() {
         updateStatus(ThingStatus.OFFLINE);
 
-        if (thread != null) {
-            try {
-                thread.interrupt();
-                thread.join(); // wait for thread to complete
-            } catch (InterruptedException e) {
-                // do nothing
-            }
-            thread = null;
-            parser = null;
-        }
-
-        if (reader != null) {
-            try {
-                reader.close();
-            } catch (IOException e) {
-                logger.trace("IOException when closing serial reader", e);
-            }
-            reader = null;
-        }
-
-        if (writer != null) {
-            try {
-                writer.close();
-            } catch (IOException e) {
-                logger.trace("IOException when closing serial writer", e);
-            }
-            writer = null;
-        }
-
-        if (port != null) {
-            port.close();
-            port = null;
+        if (port.isPresent()) {
+            port.get().close();
+            port = Optional.empty();
         }
     }
 }

@@ -12,6 +12,10 @@
  */
 package org.openhab.binding.pentair.internal;
 
+import java.nio.ByteBuffer;
+
+import org.eclipse.jdt.annotation.NonNullByDefault;
+
 /**
  * Generic class for the standard pentair package protocol. Includes helpers to generate checksum and extract key bytes
  * from packet.
@@ -19,6 +23,7 @@ package org.openhab.binding.pentair.internal;
  * @author Jeff James - initial contribution
  *
  */
+@NonNullByDefault
 public class PentairPacket {
     protected static final char[] HEXARRAY = "0123456789ABCDEF".toCharArray();
 
@@ -49,7 +54,12 @@ public class PentairPacket {
      * @param buf Array of bytes to be used to populate packet.
      */
     public PentairPacket(byte[] buf) {
-        this.buf = buf;
+        this(buf, buf.length);
+    }
+
+    public PentairPacket(byte[] buf, int l) {
+        this.buf = new byte[l];
+        System.arraycopy(buf, 0, this.buf, 0, l);
 
         initialized = true;
     }
@@ -66,13 +76,17 @@ public class PentairPacket {
         initialized = true;
     }
 
+    public int getBufLength() {
+        return buf.length;
+    }
+
     /**
      * Gets length of packet
      *
      * @return length of packet
      */
     public int getLength() {
-        return buf[LENGTH];
+        return (buf[LENGTH] & 0xFF);
     }
 
     /**
@@ -81,7 +95,7 @@ public class PentairPacket {
      * @param length length of packet
      */
     public void setLength(int length) {
-        if (length > buf[LENGTH]) {
+        if (length > (buf[LENGTH] & 0xFF)) {
             buf = new byte[length + 6];
         }
         buf[LENGTH] = (byte) length;
@@ -93,7 +107,7 @@ public class PentairPacket {
      * @return action byte of packet
      */
     public int getAction() {
-        return buf[ACTION];
+        return (buf[ACTION] & 0xFF); // need to convert to unsigned value
     }
 
     /**
@@ -111,7 +125,7 @@ public class PentairPacket {
      * @return source byte of packet
      */
     public int getSource() {
-        return buf[SOURCE];
+        return (buf[SOURCE] & 0xFF);
     }
 
     /**
@@ -129,7 +143,7 @@ public class PentairPacket {
      * @return destination byte of packet
      */
     public int getDest() {
-        return buf[DEST];
+        return (buf[DEST] & 0xFF);
     }
 
     /**
@@ -139,6 +153,39 @@ public class PentairPacket {
      */
     public void setDest(int dest) {
         buf[DEST] = (byte) dest;
+    }
+
+    /**
+     * Gets the preamble byte of packet
+     */
+    public int getPreambleByte() {
+        return (buf[1] & 0xFF);
+    }
+
+    /**
+     * Gets a particular byte of packet
+     *
+     * @param number of byte in packet
+     */
+    public int getByte(int num) {
+        int num2;
+
+        num2 = STARTOFDATA + num;
+        if (num2 > buf.length) {
+            return -1;
+        }
+        return (buf[num2] & 0xFF);
+    }
+
+    public void setByte(int num, byte b) {
+        int num2;
+
+        num2 = STARTOFDATA + num;
+        if (num2 > buf.length) {
+            return;
+        }
+
+        buf[num2] = b;
     }
 
     /**
@@ -160,8 +207,8 @@ public class PentairPacket {
      * @param bytes array of bytes to convert to a hex string. Entire buf length is converted.
      * @return hex string
      */
-    public static String bytesToHex(byte[] bytes) {
-        return bytesToHex(bytes, bytes.length);
+    public static String toHexString(byte[] bytes) {
+        return toHexString(bytes, bytes.length);
     }
 
     /**
@@ -169,7 +216,7 @@ public class PentairPacket {
      * @param len Number of bytes to convert
      * @return hex string
      */
-    public static String bytesToHex(byte[] bytes, int len) {
+    public static String toHexString(byte[] bytes, int len) {
         char[] hexChars = new char[len * 3];
         for (int j = 0; j < len; j++) {
             int v = bytes[j] & 0xFF;
@@ -180,6 +227,10 @@ public class PentairPacket {
         return new String(hexChars);
     }
 
+    public static String toHexString(ByteBuffer buf) {
+        return toHexString(buf.array(), buf.limit());
+    }
+
     /*
      * (non-Javadoc)
      *
@@ -187,17 +238,7 @@ public class PentairPacket {
      */
     @Override
     public String toString() {
-        return bytesToHex(buf, getLength() + 6);
-    }
-
-    /**
-     * Used to extract a specific byte from the packet
-     *
-     * @param n number of byte (0 based)
-     * @return byte of packet
-     */
-    public int getByte(int n) {
-        return buf[n];
+        return toHexString(buf, getBufLength());
     }
 
     /**
@@ -213,5 +254,24 @@ public class PentairPacket {
         }
 
         return checksum;
+    }
+
+    public byte[] getFullWriteStream() {
+        int checksum;
+
+        byte[] preamble = { (byte) 0xFF, (byte) 0x00, (byte) 0xFF };
+        byte[] writebuf;
+
+        writebuf = new byte[preamble.length + buf.length + 2];
+
+        System.arraycopy(preamble, 0, writebuf, 0, preamble.length);
+        System.arraycopy(this.buf, 0, writebuf, preamble.length, buf.length);
+
+        checksum = calcChecksum();
+
+        writebuf[writebuf.length - 2] = (byte) ((checksum >> 8) & 0xFF);
+        writebuf[writebuf.length - 1] = (byte) (checksum & 0xFF);
+
+        return writebuf;
     }
 }

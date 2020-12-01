@@ -12,10 +12,7 @@
  */
 package org.openhab.binding.pentair.internal;
 
-import java.util.Collections;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.openhab.core.thing.ThingTypeUID;
@@ -36,9 +33,10 @@ public class PentairBindingConstants {
     public static final String SERIAL_BRIDGE = "serial_bridge";
 
     // List of all Device Types
-    public static final String EASYTOUCH = "easytouch";
+    public static final String CONTROLLER = "controller";
     public static final String INTELLIFLO = "intelliflo";
     public static final String INTELLICHLOR = "intellichlor";
+    public static final String INTELLICHEM = "intellichem";
 
     // List of all Bridge Thing Type UIDs
     public static final ThingTypeUID IP_BRIDGE_THING_TYPE = new ThingTypeUID(BINDING_ID, IP_BRIDGE);
@@ -46,54 +44,117 @@ public class PentairBindingConstants {
 
     // List of all Thing Type UIDs
     public static final ThingTypeUID INTELLIFLO_THING_TYPE = new ThingTypeUID(BINDING_ID, INTELLIFLO);
-    public static final ThingTypeUID EASYTOUCH_THING_TYPE = new ThingTypeUID(BINDING_ID, EASYTOUCH);
+    public static final ThingTypeUID CONTROLLER_THING_TYPE = new ThingTypeUID(BINDING_ID, CONTROLLER);
     public static final ThingTypeUID INTELLICHLOR_THING_TYPE = new ThingTypeUID(BINDING_ID, INTELLICHLOR);
+    public static final ThingTypeUID INTELLICHEM_THING_TYPE = new ThingTypeUID(BINDING_ID, INTELLICHEM);
 
-    // List of all Channel ids
-    public static final String EASYTOUCH_POOLTEMP = "pooltemp";
-    public static final String EASYTOUCH_SPATEMP = "spatemp";
-    public static final String EASYTOUCH_AIRTEMP = "airtemp";
-    public static final String EASYTOUCH_SOLARTEMP = "solartemp";
+    public static final String PARAMETER_ID = "id";
 
-    public static final String EASYTOUCH_SPAHEATMODE = "spaheatmode";
-    public static final String EASYTOUCH_SPAHEATMODESTR = "spaheatmodestr";
-    public static final String EASYTOUCH_POOLHEATMODE = "poolheatmode";
-    public static final String EASYTOUCH_POOLHEATMODESTR = "poolheatmodestr";
-    public static final String EASYTOUCH_HEATACTIVE = "heatactive";
+    // Controller Groups and Items
 
-    public static final String EASYTOUCH_POOLSETPOINT = "poolsetpoint";
-    public static final String EASYTOUCH_SPASETPOINT = "spasetpoint";
+    public static final String CONTROLLER_PROPERTYFWVERSION = "fwversion";
+    public static final String CONTROLLER_PROPERTYID = "id";
 
-    public static final String EASYTOUCH_POOL = "pool";
-    public static final String EASYTOUCH_SPA = "spa";
-    public static final String EASYTOUCH_AUX1 = "aux1";
-    public static final String EASYTOUCH_AUX2 = "aux2";
-    public static final String EASYTOUCH_AUX3 = "aux3";
-    public static final String EASYTOUCH_AUX4 = "aux4";
-    public static final String EASYTOUCH_AUX5 = "aux5";
-    public static final String EASYTOUCH_AUX6 = "aux6";
-    public static final String EASYTOUCH_AUX7 = "aux7";
+    public static final String CONTROLLER_STATUS = "status";
 
-    public static final String EASYTOUCH_FEATURE1 = "feature1";
-    public static final String EASYTOUCH_FEATURE2 = "feature2";
-    public static final String EASYTOUCH_FEATURE3 = "feature3";
-    public static final String EASYTOUCH_FEATURE4 = "feature4";
-    public static final String EASYTOUCH_FEATURE5 = "feature5";
-    public static final String EASYTOUCH_FEATURE6 = "feature6";
-    public static final String EASYTOUCH_FEATURE7 = "feature7";
-    public static final String EASYTOUCH_FEATURE8 = "feature8";
+    public static final String CONTROLLER_AIRTEMPERATURE = "airtemperature";
+    public static final String CONTROLLER_SOLARTEMPERATURE = "solartemperature";
+    public static final String CONTROLLER_LIGHTMODE = "lightmode";
+    public static final String CONTROLLER_UOM = "uom";
+    public static final String CONTROLLER_SERVICEMODE = "servicemode";
+    public static final String CONTROLLER_SOLARON = "solaron";
+    public static final String CONTROLLER_HEATERON = "heateron";
+    public static final String CONTROLLER_HEATERDELAY = "heaterdelay";
+
+    public static final String CONTROLLER_POOLCIRCUIT = "pool";
+    public static final String CONTROLLER_SPACIRCUIT = "spa";
+    public static final String CONTROLLER_AUX1CIRCUIT = "aux1";
+    public static final String CONTROLLER_AUX2CIRCUIT = "aux2";
+    public static final String CONTROLLER_AUX3CIRCUIT = "aux3";
+    public static final String CONTROLLER_AUX4CIRCUIT = "aux4";
+    public static final String CONTROLLER_AUX5CIRCUIT = "aux5";
+    public static final String CONTROLLER_AUX6CIRCUIT = "aux6";
+    public static final String CONTROLLER_AUX7CIRCUIT = "aux7";
+    public static final String CONTROLLER_AUX8CIRCUIT = "aux8";
+
+    public static final String CONTROLLER_CIRCUITSWITCH = "switch";
+    public static final String CONTROLLER_CIRCUITNAME = "name";
+    public static final String CONTROLLER_CIRCUITFUNCTION = "function";
+
+    public static final String CONTROLLER_FEATURE1 = "feature1";
+    public static final String CONTROLLER_FEATURE2 = "feature2";
+    public static final String CONTROLLER_FEATURE3 = "feature3";
+    public static final String CONTROLLER_FEATURE4 = "feature4";
+    public static final String CONTROLLER_FEATURE5 = "feature5";
+    public static final String CONTROLLER_FEATURE6 = "feature6";
+    public static final String CONTROLLER_FEATURE7 = "feature7";
+    public static final String CONTROLLER_FEATURE8 = "feature8";
+
+    public static final String CONTROLLER_FEATURESWITCH = "switch";
+
+    // List of heat group and items
+    public static final String CONTROLLER_POOLHEAT = "poolheat";
+    public static final String CONTROLLER_SPAHEAT = "spaheat";
+
+    public static final String CONTROLLER_TEMPERATURE = "temperature";
+    public static final String CONTROLLER_SETPOINT = "setpoint";
+    public static final String CONTROLLER_HEATMODE = "heatmode";
+
+    // List of schedule group and items
+    public static final String CONTROLLER_SCHEDULE = "schedule%d";
+
+    public static final String CONTROLLER_SCHEDULESAVE = "save";
+    public static final String CONTROLLER_SCHEDULESTRING = "schedule";
+    public static final String CONTROLLER_SCHEDULETYPE = "type";
+    public static final String CONTROLLER_SCHEDULECIRCUIT = "circuit";
+    public static final String CONTROLLER_SCHEDULEDAYS = "days";
+    public static final String CONTROLLER_SCHEDULESTART = "start";
+    public static final String CONTROLLER_SCHEDULEEND = "end";
+
+    // List of Intellichlor channel ids
+    public static final String INTELLICHLOR_PROPERTYVERSION = "version";
+    public static final String INTELLICHLOR_PROPERTYMODEL = "model";
 
     public static final String INTELLICHLOR_SALTOUTPUT = "saltoutput";
     public static final String INTELLICHLOR_SALINITY = "salinity";
+    public static final String INTELLICHLOR_OK = "ok";
+    public static final String INTELLICHLOR_LOWFLOW = "lowflow";
+    public static final String INTELLICHLOR_LOWSALT = "lowsalt";
+    public static final String INTELLICHLOR_VERYLOWSALT = "verylowsalt";
+    public static final String INTELLICHLOR_HIGHCURRENT = "highcurrent";
+    public static final String INTELLICHLOR_CLEANCELL = "cleancell";
+    public static final String INTELLICHLOR_LOWVOLTAGE = "lowvoltage";
+    public static final String INTELLICHLOR_LOWWATERTEMP = "lowwatertemp";
+    public static final String INTELLICHLOR_COMMERROR = "commerror";
 
+    // List of Intellichem channel ids
+    public static final String INTELLICHEM_PHREADING = "phreading";
+    public static final String INTELLICHEM_ORPREADING = "orpreading";
+    public static final String INTELLICHEM_PHSETPOINT = "phsetpoint";
+    public static final String INTELLICHEM_ORPSETPOINT = "orpsetpoint";
+    public static final String INTELLICHEM_TANK1 = "tank1";
+    public static final String INTELLICHEM_TANK2 = "tank2";
+    public static final String INTELLICHEM_CALCIUMHARDNESS = "calciumhardness";
+    public static final String INTELLICHEM_CYAREADING = "cyareading";
+    public static final String INTELLICHEM_TOTALALKALINITY = "totalalkalinity";
+    public static final String INTELLICHEM_WATERFLOWALARM = "waterflowalarm";
+    public static final String INTELLICHEM_MODE1 = "mode1";
+    public static final String INTELLICHEM_MODE2 = "mode2";
+    public static final String INTELLICHEM_SATURATIONINDEX = "saturationindex";
+
+    // List of all Intelliflo channel ids
     public static final String INTELLIFLO_RUN = "run";
-    public static final String INTELLIFLO_MODE = "mode";
-    public static final String INTELLIFLO_DRIVESTATE = "drivestate";
     public static final String INTELLIFLO_POWER = "power";
     public static final String INTELLIFLO_RPM = "rpm";
-    public static final String INTELLIFLO_PPC = "ppc";
+    public static final String INTELLIFLO_GPM = "gpm";
     public static final String INTELLIFLO_ERROR = "error";
+    public static final String INTELLIFLO_STATUS1 = "status1";
+    public static final String INTELLIFLO_STATUS2 = "status2";
     public static final String INTELLIFLO_TIMER = "timer";
+    public static final String INTELLIFLO_PROGRAM1 = "program1";
+    public static final String INTELLIFLO_PROGRAM2 = "program2";
+    public static final String INTELLIFLO_PROGRAM3 = "program3";
+    public static final String INTELLIFLO_PROGRAM4 = "program4";
 
     public static final String DIAG = "diag";
 
@@ -102,7 +163,10 @@ public class PentairBindingConstants {
     public static final Integer PROPERTY_PORT = 10000;
 
     // Set of all supported Thing Type UIDs
-    public static final Set<ThingTypeUID> SUPPORTED_THING_TYPES_UIDS = Collections
-            .unmodifiableSet(Stream.of(IP_BRIDGE_THING_TYPE, SERIAL_BRIDGE_THING_TYPE, EASYTOUCH_THING_TYPE,
-                    INTELLIFLO_THING_TYPE, INTELLICHLOR_THING_TYPE).collect(Collectors.toSet()));
+    public static final Set<ThingTypeUID> SUPPORTED_THING_TYPES_UIDS = Set.of(IP_BRIDGE_THING_TYPE,
+            SERIAL_BRIDGE_THING_TYPE, CONTROLLER_THING_TYPE, INTELLIFLO_THING_TYPE, INTELLICHLOR_THING_TYPE,
+            INTELLICHEM_THING_TYPE);
+
+    public static final Set<ThingTypeUID> DISCOVERABLE_DEVICE_TYPE_UIDS = Set.of(CONTROLLER_THING_TYPE,
+            INTELLIFLO_THING_TYPE, INTELLICHLOR_THING_TYPE, INTELLICHEM_THING_TYPE);
 }

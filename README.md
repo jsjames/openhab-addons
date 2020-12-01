@@ -1,100 +1,217 @@
-# openHAB Add-ons
+# Pentair Pool
 
-<img align="right" width="220" src="./logo.png" />
+This is an openHAB binding for a Pentair Pool System.
+It is based on combined efforts of many on the internet in reverse-engineering the proprietary Pentair protocol (see References section).
+The binding was developed and tested on a system with a Pentair EasyTouch controller, but should operate with other Pentair systems.
 
-[![Build Status](https://ci.openhab.org/job/openHAB-Addons/badge/icon)](https://ci.openhab.org/job/openHAB-Addons/)
-[![EPL-2.0](https://img.shields.io/badge/license-EPL%202-green.svg)](https://opensource.org/licenses/EPL-2.0)
-[![Crowdin](https://badges.crowdin.net/openhab-addons/localized.svg)](https://crowdin.com/project/openhab-addons)
-[![Bountysource](https://www.bountysource.com/badge/tracker?tracker_id=2164344)](https://www.bountysource.com/teams/openhab/issues?tracker_ids=2164344)
+## Hardware Setup
 
-This repository contains the official set of add-ons that are implemented on top of openHAB Core APIs.
-Add-ons that got accepted in here will be maintained (e.g. adapted to new core APIs)
-by the [openHAB Add-on maintainers](https://github.com/orgs/openhab/teams/add-ons-maintainers).
+> REQUISITE DISCLAIMER: CONNECTING 3RD PARTY DEVICES TO THE PENTAIR SYSTEM BUS COULD CAUSE SERIOUS DAMAGE TO THE SYSTEM SHOULD SOMETHING MALFUNCTION.  IT IS NOT ENDORSED BY PENTAIR AND COULD VOID WARRENTY. IF YOU DECIDE TO USE THIS BINDING TO INTERFACE TO A PENTAIR CONTROLLER, THE AUTHOR(S) CAN NOT BE HELD RESPONSIBLE.
 
-To get started with binding development, follow our guidelines and tutorials over at https://www.openhab.org/docs/developer.
+This binding requires an adapter to interface to the Pentair system bus.
+This bus/wire runs between the Pentair control system, indoor control panels, IntelliFlo pumps, etc.
+It is a standard RS-485 bus running at 9600,8N1 so any RS-485 adapter should work and you should be able to buy one for under $30.
+Pentair does not publish any information on the protocol so this binding was developed using the great reverse-engineering efforts of others made available on the internet.
+I have cited several of those in the References section below.
 
-If you are interested in openHAB Core development, we invite you to come by on https://github.com/openhab/openhab-core.
+### Connecting adapter to your system
 
-## Add-ons in other repositories
+A USB or serial RS-485 interface or IP based interface can be used to interface to the Pentair system bus.
+The binding includes 2 different bridge Things depending on which type of interface you use, serial_bridge or ip_bridge.
 
-Some add-ons are not in this repository, but still part of the official [openHAB distribution](https://github.com/openhab/openhab-distro).
-An incomplete list of other repositories follows below:
+If your openHAB system is physically located far from your Pentair equipment or indoor control panel, you can use a Raspberry Pi or other computer to redirect USB/serial port traffic over the internet using a program called ser2sock (see Reference section).
+An example setup would run the following command: "ser2sock -p 10000 -s /dev/ttyUSB1 -b 9600 -d".
+Note: This is the setup utlized for the majority of my testing of this binding.
 
-* https://github.com/openhab/org.openhab.binding.zwave
-* https://github.com/openhab/org.openhab.binding.zigbee
-* https://github.com/openhab/openhab-webui
+Note: If you are on a Linux system, the framework may not see a symbolically linked device (i.e. /dev/ttyRS485).
+To use a symbolically linked device, add the following line to */etc/default/openhab* `EXTRA_JAVA_OPTS="-Dgnu.io.rxtx.SerialPorts=/dev/ttyRS485"`
 
-## Development / Repository Organization
+Once you have the interface connected to your system, it is best to test basic connectivity.
+Note the protocol is a binary protocol (not ASCII text based) and in order to view the communication packets, one must use a program capable of a binary/HEX mode.
+If connected properly, you will see a periodic traffic with packets staring with FF00FFA5.
+This is the preamble for Pentairs communication packet.
+After you see this traffic, you can proceed to configuring the Pentair binding in openHAB.
 
-openHAB add-ons are [Java](https://en.wikipedia.org/wiki/Java_(programming_language)) `.jar` files.
+#### USB/Serial interface
 
-The openHAB build system is based on [Maven](https://maven.apache.org/what-is-maven.html).
-The official IDE (Integrated development environment) is Eclipse.
+For a USB/Serial interface, you can use most terminal emulators. For Linux, you can use minicom with the following options: `minicom -H -D /dev/ttyUSB1 -b 9600`
 
-You find the following repository structure:
+#### IP interface
+
+For an IP based interface (or utilizing ser2sock) on a Linux system, you can use nc command with the following options: `nc localhost 10000 | xxd`
+
+### Pentair Controller panel configuration
+
+In order for the Pentair EasyTouch controller to receive commands from this binding, you may need to enable "Spa-side" remote on the controller itself.
+
+## Supported Things
+
+This binding supports the following thing types:
+
+| Thing           | Thing Type | Description                             |
+| --------------- | :--------: | --------------------------------------- |
+| ip_bridge       |   Bridge   | A TCP network RS-485 bridge device.     |
+| serial_bridge   |   Bridge   | A USB or serial RS-485 device.          |
+| EasyTouch       |   Thing    | Pentiar EasyTouch pool controller.      |
+| Intelliflo Pump |   Thing    | Pentair Intelliflo variable speed pump. |
+| Intellichlor    |   Thing    | Pentair Intellichlor chlorinator.       |
+
+## Binding Configuration
+
+There are no overall binding configurations that need to be set up as all configuration is done at the "Thing" level.
+
+## Thing Configuration
+
+The following table shows the available configuration parameters for each thing.
+
+| Thing         | Configuration Parameters                                     |
+| ------------- | ------------------------------------------------------------ |
+| ip_bridge     | address - IP address for the RS-485 adapter - Required.      |
+|               | port - TCP port for the RS-485 adapter - Not Required - default = 10000. |
+|               | id - ID to use when communicating on Pentair control bus - default = 34. |
+| serial_bridge | serialPort - Serial port for the IT-100s bridge - Required.  |
+|               | baud - Baud rate of the IT-100 bridge - Not Required - default = 9600. |
+|               | pollPeriod - Period of time in minutes between the poll command being sent to the IT-100 bridge - Not Required - default=1. |
+|               | id - ID to use when communciating on Pentair control bus - default = 34. |
+
+Currently automatic discovery is not supported.
+Here is an example of a thing configuration file called 'pentair.things':
 
 ```
-.
-+-- bom       Maven buildsystem: Bill of materials
-|   +-- openhab-addons  Lists all extensions for other repos to reference them
-|   +-- ...             Other boms
-|
-+-- bundles   Official openHAB extensions
-|   +-- org.openhab.binding.airquality
-|   +-- org.openhab.binding.astro
-|   +-- ...
-|
-+-- features  Part of the runtime dependency resolver ("Karaf features")
-|
-+-- itests    Integration tests. Those tests require parts of the framework to run.
-|   +-- org.openhab.binding.astro.tests
-|   +-- org.openhab.binding.avmfritz.tests
-|   +-- ...
-|
-+-- src/etc   Auxilary buildsystem files: The license header for automatic checks for example
-+-- tools     Static code analyser instructions
-|
-+-- CODEOWNERS  This file assigns people to directories so that they are informed if a pull-request
-                would modify their add-ons.
+Bridge pentair:ip_bridge:1 [ address="192.168.1.202", port=10001 ] {
+    easytouch main [ id=16 ]
+    intelliflo pump1 [ id=96 ]
+    intellichlor ic40
+}
 ```
 
-### Command line build
+For a serial bridge you would use a configuration similar to this, again saved as 'pentair.things':
+```
+Bridge pentair:serial_bridge:1 [ serialPort="/dev/ttyUSB0" ] {
+    easytouch main [ id=16 ]
+    intelliflo pump1 [ id=96 ]
+    intellichlor ic40
+}
+```
 
-To build all add-ons from the command-line, type in:
+## Channels
 
-`mvn clean install`
+Pentair things support a variety of channels as seen below in the following table:
 
-To improve build times you can add the following options to the command:
+| Channel              | Item Type | Description                                                  |
+| -------------------- | --------- | ------------------------------------------------------------ |
+| EasyTouch Controller |           |                                                              |
+| pooltemp             | Number    | Current pool temperature (readonly)                          |
+| spatemp              | Number    | Current spa temperature (readonly)                           |
+| airtemp              | Number    | Current air temperature (readonly)                           |
+| solartemp            | Number    | Current solar temperature (readonly)                         |
+| poolheatmode         | Number    | Current heat mode setting for pool (readonly): 0=Off, 1=Heater, 2=Solar Preferred, 3=Solar |
+| poolheatmodestr      | String    | Current heat mode setting for pool in string form (readonly) |
+| spaheatmode          | Number    | Current heat mode setting for spa (readonly): 0=Off, 1=Heater, 2=Solar Preferred, 3=Solar |
+| spaheatmodestr       | String    | Current heat mode setting for spa in string form (readonly)> |
+| poolsetpoint         | Number    | Current pool temperature set point                           |
+| spasetpoint          | Number    | Current spa temperature set point                            |
+| heatactive           | Number    | Heater mode is active                                        |
+| pool                 | Switch    | Primary pool mode                                            |
+| spa                  | Switch    | Spa mode                                                     |
+| aux1                 | Switch    | Aux1 mode                                                    |
+| aux2                 | Switch    | Aux2 mode                                                    |
+| aux3                 | Switch    | Aux3 mode                                                    |
+| aux4                 | Switch    | Aux4 mode                                                    |
+| aux5                 | Switch    | Aux5 mode                                                    |
+| aux6                 | Switch    | Aux6 mode                                                    |
+| aux7                 | Switch    | Aux7 mode                                                    |
+| feature1             | Switch    | Feature1 mode                                                |
+| feature2             | Switch    | Feature2 mode                                                |
+| feature3             | Switch    | Feature3 mode                                                |
+| feature4             | Switch    | Feature4 mode                                                |
+| feature5             | Switch    | Feature5 mode                                                |
+| feature6             | Switch    | Feature6 mode                                                |
+| feature7             | Switch    | Feature7 mode                                                |
+| feature8             | Switch    | Feature8 mode                                                |
+| IntelliChlor         |           |                                                              |
+| saltoutput           | Number    | Current salt output % (readonly)                             |
+| salinity             | Number    | Salinity (ppm) (readonly)                                    |
+| IntelliFlo Pump      |           |                                                              |
+| run                  | Number    | Pump running (readonly)                                      |
+| drivestate           | Number    | Pump drivestate (readonly)                                   |
+| mode                 | Number    | Pump mode (readonly)                                         |
+| rpm                  | Number    | Pump RPM (readonly)                                          |
+| power                | Number    | Pump power in Watts (readonly)                               |
+| error                | Number    | Pump error (readonly)                                        |
+| ppc                  | Number    | Pump PPC? (readonly)                                         |
 
-| Option                        | Description                                         |
-| ----------------------------- | --------------------------------------------------- |
-| `-DskipChecks`                | Skip the static analysis (Checkstyle, FindBugs)     |
-| `-DskipTests`                 | Skip the execution of tests                         |
-| `-Dmaven.test.skip=true`      | Skip the compilation and execution of tests         |
-| `-Dfeatures.verify.skip=true` | Skip the Karaf feature verification                 |
-| `-Dspotless.check.skip=true`  | Skip the Spotless code style checks                 |
-| `-o`                          | Work offline so Maven does not download any updates |
-| `-T 1C`                       | Build in parallel, using 1 thread per core          |
+## Full Example
 
-For example you can skip checks and tests during development with:
+The following is an example of an item file (pentair.items), you can change the °F to °C if you are using metric temperature units:
 
-`mvn clean install -DskipChecks -DskipTests`
+```
+Group gPool          "Pool"
 
-Adding these options improves the build time but could hide problems in your code.
-Parallel builds are also less easy to debug and the increased load may cause timing sensitive tests to fail.
+Number Pool_Temp               "Pool Temp [%.1f °F]"          <temperature>   (gPool) { channel = "pentair:easytouch:1:main:pooltemp" }
+Number Spa_Temp                "Spa Temp [%.1f °F]"           <temperature>   (gPool) { channel = "pentair:easytouch:1:main:spatemp" }
+Number Air_Temp                "Air Temp [%.1f °F]"           <temperature>   (gPool) { channel = "pentair:easytouch:1:main:airtemp" }
+Number Solar_Temp              "Solar Temp [%.1f °F]"         <temperature>   (gPool) { channel = "pentair:easytouch:1:main:solartemp" }
 
-To check if your code is following the [code style](https://www.openhab.org/docs/developer/guidelines.html#b-code-formatting-rules-style) run: `mvn spotless:check`
-To reformat your code so it conforms to the code style you can run: `mvn spotless:apply`
+Number PoolHeatMode            "Pool Heat Mode [%d]"                          (gPool) { channel="pentair:easytouch:1:main:poolheatmode" }
+String PoolHeatModeStr         "Pool Heat Mode [%s]"                          (gPool) { channel="pentair:easytouch:1:main:poolheatmodestr" }
+Number SpaHeatMode             "Spa Heat Mode [%d]"                           (gPool) { channel="pentair:easytouch:1:main:spaheatmode" }
+String SpaHeatModeStr          "Spa Heat Mode [%s]"                           (gPool) { channel="pentair:easytouch:1:main:spaheatmodestr" }
+Number PoolSetPoint            "Pool Set Point [%.1f °F]"     <temperature>   (gPool) { channel="pentair:easytouch:1:main:poolsetpoint" }
+Number SpaSetPoint             "Spa Set Point [%.1f °F]"      <temperature>   (gPool) { channel="pentair:easytouch:1:main:spasetpoint" }
+Number HeatActive              "Heat Active [%d]"                             (gPool) { channel="pentair:easytouch:1:main:heatactive" }
 
-When your add-on also has an integration test in the `itests` directory, you may need to update the runbundles in the `itest.bndrun` file when the Maven dependencies change.
-Maven can resolve the integration test dependencies automatically by executing: `mvn clean install -DwithResolver -DskipChecks`
+Switch Mode_Spa                "Spa Mode"                                     (gPool) { channel = "pentair:easytouch:1:main:spa" }
+Switch Mode_Pool               "Pool Mode"                                    (gPool) { channel = "pentair:easytouch:1:main:pool" }
+Switch Mode_PoolLight          "Pool Light"                                   (gPool) { channel = "pentair:easytouch:1:main:aux1" }
+Switch Mode_SpaLight           "Spa Light"                                    (gPool) { channel = "pentair:easytouch:1:main:aux2" }
+Switch Mode_Jets               "Jets"                                         (gPool) { channel = "pentair:easytouch:1:main:aux3" }
+Switch Mode_Boost              "Boost Mode"                                   (gPool) { channel = "pentair:easytouch:1:main:aux4" }
+Switch Mode_Aux5               "Aux5 Mode"                                    (gPool) { channel = "pentair:easytouch:1:main:aux5" }
+Switch Mode_Aux6               "Aux6 Mode"                                    (gPool) { channel = "pentair:easytouch:1:main:aux6" }
+Switch Mode_Aux7               "Aux7 Mode"                                    (gPool) { channel = "pentair:easytouch:1:main:aux7" }
+Switch Mode_Spillway           "Spillway Mode"                                (gPool) { channel = "pentair:easytouch:1:main:feature1" }
 
-The build generates a `.jar` file per bundle in the respective bundle `/target` directory.
+Number SaltOutput              "Salt Output [%d%%]"                           (gPool) { channel = "pentair:intellichlor:1:ic40:saltoutput" }
+Number Salinity                "Salinity [%d ppm]"                            (gPool) { channel = "pentair:intellichlor:1:ic40:salinity" }
 
-### How to develop via an Integrated Development Environment (IDE)
+Switch Pump_Run                "Pump running [%d]"                            (gPool) { channel = "pentair:intelliflo:1:pump1:run" }
+Number Pump_DriveState         "Pump drivestate [%d]"                         (gPool) { channel = "pentair:intelliflo:1:pump1:drivestate" }
+Number Pump_Mode               "Pump Mode [%d]"                               (gPool) { channel = "pentair:intelliflo:1:pump1:mode" }
+Number Pump_RPM                "Pump RPM [%d]"                                (gPool) { channel = "pentair:intelliflo:1:pump1:rpm" }
+Number Pump_Power              "Pump Power [%d W]"                            (gPool) { channel = "pentair:intelliflo:1:pump1:power" }
+Number Pump_Error              "Pump Error [%d]"                              (gPool) { channel = "pentair:intelliflo:1:pump1:error" }
+Number Pump_PPC                "Pump PPC [%d]"                                (gPool) { channel = "pentair:intelliflo:1:pump1:ppc" }
+```
 
-We have assembled some step-by-step guides for different IDEs on our developer documentation website:
+Here is an example of a complete sitemap, saved as `pentair.sitemap`.  Adjust the temperature values for metric if so desired.
+```
+sitemap pool label="Pool stuff" {
+  Frame label="Pool" {
+    Switch item=Mode_Pool
+    Switch item=Mode_PoolLight
+    Text item=Pool_Temp valuecolor=[>82="red",>77="orange",<=77="blue"]
+    Setpoint item=PoolSetPoint minValue=85 maxValue=103 step=1.0
+    Group item=gPool label="Advanced"
+  }
+  Frame label="Spa" {
+    Switch item=Mode_Spa
+    Switch item=Mode_SpaLight
+    Switch item=Mode_Jets
+    Text item=Pool_Temp valuecolor=[>82="red",>77="orange",<=77="blue"]
+    Setpoint item=SpaSetPoint minValue=85 maxValue=103 step=1.0
+  }
+}
+```
 
-https://www.openhab.org/docs/developer/#setup-the-development-environment
+## References
 
-Happy coding!
+Setting up RS485 and basic protocol - https://www.sdyoung.com/home/decoding-the-pentair-easytouch-rs-485-protocol/
+ser2sock GitHub - https://github.com/nutechsoftware/ser2sock
+
+## Future Enhancements
+
+- Add automatic discovery of devices on RS-485
+- Add in IntelliBrite light color selection (need to capture protocol on system that has this)
+- Add direct control of pump (non read-only channels)
+- Fix heat active - not working on my system.
