@@ -36,6 +36,9 @@ public class PentairControllerSchedule {
     public static final int ENDM = 5;
     public static final int DAYS = 6;
 
+    private static final String regexSchedule = "^(NONE|NORMAL|EGGTIMER|ONCEONLY),(\\\\d+),(\\\\d+):(\\\\d+),(\\\\d+):(\\\\d+),([SMTWRFY]+)";
+    private static final Pattern ptnSchedule = Pattern.compile(regexSchedule);
+
     private boolean dirty;
 
     public enum ScheduleType {
@@ -98,7 +101,7 @@ public class PentairControllerSchedule {
     }
 
     public @Nullable String getScheduleTypeStr() {
-        String str = type.getName();
+        String str = type.name();
 
         return str;
     }
@@ -243,12 +246,8 @@ public class PentairControllerSchedule {
     }
 
     public boolean fromString(String str) {
-        final String rePattern = "^(NONE|NORMAL|EGGTIMER|ONCEONLY),(\\\\d+),(\\\\d+):(\\\\d+),(\\\\d+):(\\\\d+),([SMTWRFY]+)";
-
         String schedulestr = str.toUpperCase();
-
-        final Pattern ptn = Pattern.compile(rePattern);
-        Matcher m = ptn.matcher(schedulestr);
+        Matcher m = ptnSchedule.matcher(schedulestr);
 
         if (!m.find()) {
             return false;
@@ -289,7 +288,7 @@ public class PentairControllerSchedule {
     }
 
     public String getGroupID() {
-        String groupID = String.format(CONTROLLER_SCHEDULE, id);
+        String groupID = CONTROLLER_SCHEDULE + Integer.toString(id);
 
         return groupID;
     }

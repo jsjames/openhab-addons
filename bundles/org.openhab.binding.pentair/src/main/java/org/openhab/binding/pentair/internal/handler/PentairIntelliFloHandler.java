@@ -69,7 +69,7 @@ public class PentairIntelliFloHandler extends PentairBaseThingHandler {
     public void finishOnline() {
         super.finishOnline();
         if (pollingjob == null) {
-            pollingjob = scheduler.scheduleWithFixedDelay(new PumpStatus(), 10, 30, TimeUnit.SECONDS);
+            pollingjob = scheduler.scheduleWithFixedDelay(this::pumpWatchDog, 10, 30, TimeUnit.SECONDS);
         }
     }
 
@@ -91,44 +91,41 @@ public class PentairIntelliFloHandler extends PentairBaseThingHandler {
      * @author Jeff James
      *
      */
-    class PumpStatus implements Runnable {
-        @Override
-        public void run() {
-            Bridge bridge = getBridge();
-            if (bridge == null) {
+    public void pumpWatchDog() {
+        Bridge bridge = getBridge();
+        if (bridge == null) {
+            return;
+        }
+
+        List<Thing> things = bridge.getThings();
+
+        for (Thing t : things) {
+            if (!t.getThingTypeUID().equals(INTELLIFLO_THING_TYPE)) {
+                continue;
+            }
+
+            PentairIntelliFloHandler handler = (PentairIntelliFloHandler) t.getHandler();
+            if (handler == null) {
                 return;
             }
 
-            List<Thing> things = bridge.getThings();
+            logger.debug("pump runmode = {}", runMode);
 
-            for (Thing t : things) {
-                if (!t.getThingTypeUID().equals(INTELLIFLO_THING_TYPE)) {
-                    continue;
-                }
-
-                PentairIntelliFloHandler handler = (PentairIntelliFloHandler) t.getHandler();
-                if (handler == null) {
-                    return;
-                }
-
-                logger.debug("pump runmode = {}", runMode);
-
-                if (handler.runMode) {
-                    logger.debug("Sending watchdog to pump");
-                    handler.sendPumpOnOROff(true);
-                } else {
-                    handler.requestPumpStatus();
-                }
+            if (handler.runMode) {
+                logger.debug("Sending watchdog to pump");
+                handler.sendPumpOnOROff(true);
+            } else {
+                handler.requestPumpStatus();
             }
         }
-    };
+    }
 
     // checkOtherMaster - check to make sure the system does not have a controller OR that the controller is in
     // servicemode
     protected boolean checkOtherMaster() {
-        PentairControllerHandler pch = PentairControllerHandler.onlineController;
+        PentairControllerHandler handler = getBridgeHandler().findController();
 
-        if (pch != null && !pch.serviceMode) {
+        if (handler != null && !handler.getServiceMode()) {
             return true;
         }
 

@@ -107,17 +107,20 @@ public class PentairIntelliChlorHandlerTest {
     @Test
     public void test() {
         pic_handler.initialize();
-
+        verify(callback, times(1)).statusUpdated(eq(thing),
+                argThat(arg -> arg.getStatus().equals(ThingStatus.UNKNOWN)));
         assertThat(pic_handler.id, equalTo(0));
 
         PentairIntelliChlorPacket p = new PentairIntelliChlorPacket(packets[0], packets[0].length);
         pic_handler.processPacketFrom(p);
-        verify(callback, times(1)).statusUpdated(eq(thing), argThat(arg -> arg.getStatus().equals(ThingStatus.ONLINE)));
         ChannelUID cuid = new ChannelUID(new ThingUID("1:2:3"), INTELLICHLOR_SALTOUTPUT);
         verify(callback, times(1)).stateUpdated(cuid, new DecimalType(80));
 
         p = new PentairIntelliChlorPacket(packets[1], packets[1].length);
         pic_handler.processPacketFrom(p);
+
+        // Won't actually go ONLINE until a packet FROM the intellichlor
+        verify(callback, times(1)).statusUpdated(eq(thing), argThat(arg -> arg.getStatus().equals(ThingStatus.ONLINE)));
         cuid = new ChannelUID(new ThingUID("1:2:3"), INTELLICHLOR_SALINITY);
         verify(callback, times(1)).stateUpdated(cuid, new DecimalType(5150));
         cuid = new ChannelUID(new ThingUID("1:2:3"), INTELLICHLOR_OK);

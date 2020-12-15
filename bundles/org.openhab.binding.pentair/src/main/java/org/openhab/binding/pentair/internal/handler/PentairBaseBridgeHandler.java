@@ -179,7 +179,7 @@ public abstract class PentairBaseBridgeHandler extends BaseBridgeHandler impleme
      *
      * @throws Exception
      */
-    protected abstract int connect();
+    protected abstract boolean connect();
 
     protected abstract void disconnect();
 
@@ -190,7 +190,7 @@ public abstract class PentairBaseBridgeHandler extends BaseBridgeHandler impleme
 
         connectstate = ConnectState.CONNECTING;
 
-        if (connect() != 0) {
+        if (!connect()) {
             connectstate = ConnectState.CONFIGERROR;
 
             return;
@@ -198,7 +198,7 @@ public abstract class PentairBaseBridgeHandler extends BaseBridgeHandler impleme
 
         // montiorIOJob will only start after a successful connection
         if (monitorIOJob == null) {
-            monitorIOJob = scheduler.scheduleWithFixedDelay(() -> monitorIO(), 60, 30, TimeUnit.SECONDS);
+            monitorIOJob = scheduler.scheduleWithFixedDelay(this::monitorIO, 60, 30, TimeUnit.SECONDS);
         }
 
         parserThread = new Thread(parser, "OH-pentair-" + this.getThing().getUID() + "-parser");
@@ -319,6 +319,34 @@ public abstract class PentairBaseBridgeHandler extends BaseBridgeHandler impleme
         return null;
     }
 
+    public @Nullable PentairControllerHandler findController() {
+        List<Thing> things = getThing().getThings();
+
+        for (Thing t : things) {
+            PentairBaseThingHandler handler = (PentairBaseThingHandler) t.getHandler();
+
+            if (handler instanceof PentairControllerHandler) {
+                return (PentairControllerHandler) handler;
+            }
+        }
+
+        return null;
+    }
+
+    public @Nullable PentairIntelliChlorHandler findIntellichlor() {
+        List<Thing> things = getThing().getThings();
+
+        for (Thing t : things) {
+            PentairBaseThingHandler handler = (PentairBaseThingHandler) t.getHandler();
+
+            if (handler instanceof PentairIntelliChlorHandler) {
+                return (PentairIntelliChlorHandler) handler;
+            }
+        }
+
+        return null;
+    }
+
     @Override
     public void onPentairPacket(PentairPacket p) {
         PentairBaseThingHandler thinghandler;
@@ -334,8 +362,8 @@ public abstract class PentairBaseBridgeHandler extends BaseBridgeHandler impleme
                 logger.debug("Command from control panel device ({}): {}", p.getSource(), p);
             } else if (!unregistered.contains(p.getSource())) { // if not yet seen, print out ONE message and discover
                 if (sourceType == 0x01) { // controller
-                    if (PentairControllerHandler.onlineController == null) { // only register one
-                                                                             // controller
+                    PentairControllerHandler handler = this.findController();
+                    if (handler == null) { // only register one controller
                         if (discovery && discoveryService != null) {
                             discoveryService.notifyDiscoveredController(source);
                         }
@@ -370,7 +398,8 @@ public abstract class PentairBaseBridgeHandler extends BaseBridgeHandler impleme
         thinghandler = equipment.get(0);
 
         if (thinghandler == null) {
-            if (!unregistered.contains(0)) { // if not yet seen, print out log message
+            // Only register if the packet is sent from chlorinator (i.e. action=0x12)
+            if (!unregistered.contains(0) && p.getAction() == 0x12) { // if not yet seen, print out log message
                 if (discovery && discoveryService != null) {
                     discoveryService.notifyDiscoveredIntellichlor(0);
                 }

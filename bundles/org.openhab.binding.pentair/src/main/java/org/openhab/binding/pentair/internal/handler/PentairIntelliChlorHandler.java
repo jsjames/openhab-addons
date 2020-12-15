@@ -15,9 +15,9 @@ package org.openhab.binding.pentair.internal.handler;
 import static org.openhab.binding.pentair.internal.PentairBindingConstants.*;
 
 import java.util.Map;
+import java.util.Objects;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
-import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.binding.pentair.internal.PentairIntelliChlorPacket;
 import org.openhab.binding.pentair.internal.PentairPacket;
 import org.openhab.core.thing.ChannelUID;
@@ -45,21 +45,19 @@ public class PentairIntelliChlorHandler extends PentairBaseThingHandler {
     protected String name = "";
 
     /** for a saltoutput packet, represents the salt output percent */
-    public int saltOutput;
+    private int saltOutput;
     /** for a salinity packet, is value of salinity. Must be multiplied by 50 to get the actual salinity value. */
-    public int salinity;
+    private int salinity;
 
-    public boolean ok;
-    public boolean lowFlow;
-    public boolean lowSalt;
-    public boolean veryLowSalt;
-    public boolean highCurrent;
-    public boolean cleanCell;
-    public boolean lowVoltage;
-    public boolean lowWaterTemp;
-    public boolean commError;
-
-    public static @Nullable PentairIntelliChlorHandler onlineChlorinator;
+    private boolean ok;
+    private boolean lowFlow;
+    private boolean lowSalt;
+    private boolean veryLowSalt;
+    private boolean highCurrent;
+    private boolean cleanCell;
+    private boolean lowVoltage;
+    private boolean lowWaterTemp;
+    private boolean commError;
 
     public PentairIntelliChlorHandler(Thing thing) {
         super(thing);
@@ -73,12 +71,13 @@ public class PentairIntelliChlorHandler extends PentairBaseThingHandler {
 
     @Override
     public void goOnline() {
-        if (onlineChlorinator != null) {
+        PentairIntelliChlorHandler handler = Objects.requireNonNull(getBridgeHandler()).findIntellichlor();
+
+        if (handler != null && !handler.equals(this)) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
                     "Another IntelliChlor is already configured.");
             return;
         } else {
-            onlineChlorinator = this;
             super.goOnline();
         }
     }
@@ -86,7 +85,6 @@ public class PentairIntelliChlorHandler extends PentairBaseThingHandler {
     @Override
     public void goOffline(ThingStatusDetail detail) {
         super.goOffline(detail);
-        onlineChlorinator = null;
     }
 
     @Override
@@ -134,10 +132,6 @@ public class PentairIntelliChlorHandler extends PentairBaseThingHandler {
 
     @Override
     public void processPacketFrom(PentairPacket p) {
-        if (waitStatusForOnline) { // Only go online after first response from the Intellichlor
-            finishOnline();
-        }
-
         PentairIntelliChlorPacket pic = (PentairIntelliChlorPacket) p;
 
         switch (p.getAction()) {
@@ -159,6 +153,10 @@ public class PentairIntelliChlorHandler extends PentairBaseThingHandler {
                 logger.debug("Intellichlor set output % {}", saltOutput);
                 break;
             case 0x12: // response to set salt output
+                if (waitStatusForOnline) { // Only go online after first response from the Intellichlor
+                    finishOnline();
+                }
+
                 salinity = pic.getSalinity();
 
                 ok = pic.getOk();

@@ -54,12 +54,12 @@ public class PentairSerialBridgeHandler extends PentairBaseBridgeHandler {
     }
 
     @Override
-    protected synchronized int connect() {
+    protected synchronized boolean connect() {
         config = getConfigAs(PentairSerialBridgeConfig.class);
 
         if (config.serialPort.isEmpty()) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, "no serial port configured");
-            return -1;
+            return false;
         }
 
         this.id = config.id;
@@ -70,7 +70,7 @@ public class PentairSerialBridgeHandler extends PentairBaseBridgeHandler {
         if (portIdentifier == null) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
                     "Configured serial port does not exist");
-            return -1;
+            return false;
         }
 
         try {
@@ -86,7 +86,7 @@ public class PentairSerialBridgeHandler extends PentairBaseBridgeHandler {
             port = Optional.of(portIdentifier.open("org.openhab.binding.pentair", 10000));
 
             if (!port.isPresent()) {
-                return -1;
+                return false;
             }
 
             port.get().setSerialPortParams(9600, SerialPort.DATABITS_8, SerialPort.STOPBITS_1, SerialPort.PARITY_NONE);
@@ -103,17 +103,18 @@ public class PentairSerialBridgeHandler extends PentairBaseBridgeHandler {
                 setOutputStream(os);
             }
         } catch (PortInUseException e) {
-            String msg = String.format("Serial port already in use: %s", config.serialPort);
+            String msg = String.format("Serial port already in use: %s, %s", config.serialPort, e.getMessage());
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, msg);
-            return -1;
+            return false;
         } catch (UnsupportedCommOperationException e) {
-            String msg = String.format("got unsupported operation %s on port %s", e.getMessage(), config.serialPort);
+            String msg = String.format("got unsupported operation %s on port %s, %s", e.getMessage(), config.serialPort,
+                    e.getMessage());
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, msg);
-            return -2;
+            return false;
         } catch (IOException e) {
             String msg = String.format("got IOException %s on port %s", e.getMessage(), config.serialPort);
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, msg);
-            return -2;
+            return false;
         }
 
         // if you have gotten this far, you should be connected to the serial port
@@ -121,7 +122,7 @@ public class PentairSerialBridgeHandler extends PentairBaseBridgeHandler {
 
         updateStatus(ThingStatus.ONLINE);
 
-        return 0;
+        return true;
     }
 
     @Override

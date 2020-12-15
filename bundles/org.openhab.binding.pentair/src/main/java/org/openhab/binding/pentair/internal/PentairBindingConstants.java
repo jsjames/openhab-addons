@@ -50,10 +50,12 @@ public class PentairBindingConstants {
 
     public static final String PARAMETER_ID = "id";
 
-    // Controller Groups and Items
+    // Controller Items
 
     public static final String CONTROLLER_PROPERTYFWVERSION = "fwversion";
     public static final String CONTROLLER_PROPERTYID = "id";
+
+    public static final String CONTROLLER_CONFIGSYNCTIME = "synctime";
 
     public static final String CONTROLLER_STATUS = "status";
 
@@ -101,7 +103,7 @@ public class PentairBindingConstants {
     public static final String CONTROLLER_HEATMODE = "heatmode";
 
     // List of schedule group and items
-    public static final String CONTROLLER_SCHEDULE = "schedule%d";
+    public static final String CONTROLLER_SCHEDULE = "schedule";
 
     public static final String CONTROLLER_SCHEDULESAVE = "save";
     public static final String CONTROLLER_SCHEDULESTRING = "schedule";

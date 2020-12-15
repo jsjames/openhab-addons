@@ -46,7 +46,7 @@ public class PentairIPBridgeHandler extends PentairBaseBridgeHandler {
     }
 
     @Override
-    protected synchronized int connect() {
+    protected synchronized boolean connect() {
         config = getConfigAs(PentairIPBridgeConfig.class);
 
         this.id = config.id;
@@ -61,16 +61,16 @@ public class PentairIPBridgeHandler extends PentairBaseBridgeHandler {
 
             logger.debug("Pentair IPBridge connected to {}:{}", config.address, config.port);
         } catch (UnknownHostException e) {
-            String msg = String.format("unknown host name: %s", config.address);
+            String msg = String.format("unknown host name: %s, %s", config.address, e.getMessage());
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, msg);
-            return -1;
+            return false;
         } catch (IOException e) {
-            String msg = String.format("cannot open connection to %s", config.address);
+            String msg = String.format("cannot open connection to %s, %s", config.address, e.getMessage());
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, msg);
-            return -2;
+            return false;
         }
 
-        return 0;
+        return true;
     }
 
     @Override

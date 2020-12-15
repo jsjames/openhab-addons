@@ -15,8 +15,7 @@ package org.openhab.binding.pentair.internal;
 import javax.measure.quantity.Temperature;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
-import org.openhab.binding.pentair.internal.handler.PentairControllerHandler;
-import org.openhab.binding.pentair.internal.handler.PentairIntelliChlorHandler;
+import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.core.library.types.QuantityType;
 import org.openhab.core.library.unit.SIUnits;
 import org.slf4j.Logger;
@@ -25,7 +24,7 @@ import org.slf4j.LoggerFactory;
 /**
  * Class for the pentair controller schedules.
  *
- * @author Jeff James - initial contribution
+ * @author Jeff James - initial contribution.
  *
  */
 @NonNullByDefault
@@ -42,6 +41,7 @@ public class PentairIntelliChem {
     public static final int ORPSETPOINTLO = 7;
     public static final int TANK1 = 20;
     public static final int TANK2 = 21;
+    public static final int SATURATIONINDEX = 22;
     public static final int CALCIUMHARDNESSHI = 23;
     public static final int CALCIUMHARDNESSLO = 24;
     public static final int CYAREADING = 27;
@@ -182,39 +182,39 @@ public class PentairIntelliChem {
         return alkalinityFactor;
     }
 
-    public double calcTotalDisovledSolidsFactor() {
+    public double calcTotalDisovledSolidsFactor(boolean saltPool) {
         // 12.1 for non-salt; 12.2 for salt
 
-        if (PentairIntelliChlorHandler.onlineChlorinator != null) {
+        if (saltPool) {
             return 12.2;
         }
 
         return 12.1;
     }
 
-    public double calcSaturationIndex() {
-        QuantityType<Temperature> temperature;
+    public double calcSaturationIndex(@Nullable QuantityType<Temperature> waterTemp, boolean saltPool) {
         double alkalinityFactor;
-        double temperatureFactor;
+        double temperatureFactor = .4; // if no temperature is available, use default value of .4
         double saturationIndex;
 
-        PentairControllerHandler pch = PentairControllerHandler.onlineController;
-
-        if (pch != null) {
-            temperature = pch.getWaterTemp();
-            temperatureFactor = calcTemperatureFactor(temperature);
-        } else {
-            temperatureFactor = .4;
+        if (waterTemp != null) {
+            temperatureFactor = calcTemperatureFactor(waterTemp);
         }
 
         alkalinityFactor = calcAlkalinityFactor();
 
         saturationIndex = this.phReading + calcCalciumHardnessFactor() + alkalinityFactor + temperatureFactor
-                - calcTotalDisovledSolidsFactor();
+                - calcTotalDisovledSolidsFactor(saltPool);
 
         return saturationIndex;
     }
 
+    /**
+     * parsePacket - This function will parse a IntelliChem status packet. Note, this is based on the efforst of the
+     * nodejs-poolController utility since this is not equipment that I have and only minimally tested by the community.
+     *
+     * @param p - PentairPacket to parse
+     */
     public void parsePacket(PentairPacket p) {
         if (p.getLength() != 41) {
             logger.debug("Intellichem packet not 41 bytes long");
@@ -233,8 +233,7 @@ public class PentairIntelliChem {
         waterFlowAlarm = p.getByte(WATERFLOW) != 0x00;
         mode1 = p.getByte(MODE1);
         mode2 = p.getByte(MODE2);
-
-        saturationIndex = calcSaturationIndex();
+        saturationIndex = p.getByte(SATURATIONINDEX) / 100;
     }
 
     @Override

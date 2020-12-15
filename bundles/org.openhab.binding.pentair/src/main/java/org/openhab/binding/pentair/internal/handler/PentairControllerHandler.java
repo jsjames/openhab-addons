@@ -46,6 +46,7 @@ import org.openhab.core.thing.ThingStatus;
 import org.openhab.core.thing.ThingStatusDetail;
 import org.openhab.core.types.Command;
 import org.openhab.core.types.RefreshType;
+import org.openhab.core.types.State;
 import org.openhab.core.types.UnDefType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,6 +62,8 @@ import org.slf4j.LoggerFactory;
 public class PentairControllerHandler extends PentairBaseThingHandler {
     protected static final int NUM_CIRCUITS = PentairControllerStatus.NUMCIRCUITS;
     protected static final int NUM_SCHEDULES = 9;
+    private static final int CACHE_EXPIRY = (int) TimeUnit.SECONDS.toMillis(10);
+    private static final int CACHE_EXPIRY_LONG = (int) TimeUnit.MINUTES.toMillis(10);
 
     protected static final String[] CIRCUIT_GROUPS = { CONTROLLER_SPACIRCUIT, CONTROLLER_AUX1CIRCUIT,
             CONTROLLER_AUX2CIRCUIT, CONTROLLER_AUX3CIRCUIT, CONTROLLER_AUX4CIRCUIT, CONTROLLER_POOLCIRCUIT,
@@ -68,12 +71,10 @@ public class PentairControllerHandler extends PentairBaseThingHandler {
             CONTROLLER_FEATURE1, CONTROLLER_FEATURE2, CONTROLLER_FEATURE3, CONTROLLER_FEATURE4, CONTROLLER_FEATURE5,
             CONTROLLER_FEATURE6, CONTROLLER_FEATURE7, CONTROLLER_FEATURE8 };
 
-    // only one controller can be online at a time, used to validate only one is online & to access status
-    public static @Nullable PentairControllerHandler onlineController;
-    public boolean serviceMode = false;
-    public boolean uom = false;
+    private boolean serviceMode = false;
+    private boolean uom = false;
 
-    public boolean syncTime = true;
+    private boolean syncTime = true;
 
     private final Logger logger = LoggerFactory.getLogger(PentairControllerHandler.class);
 
@@ -82,9 +83,6 @@ public class PentairControllerHandler extends PentairBaseThingHandler {
     private int preambleByte = -1; // Byte to use after 0xA5 in communicating to controller. Not sure why this changes,
                                    // but it requires to be in sync and up-to-date
     private long lastScheduleTypeWrite;
-
-    private static final int CACHE_EXPIRY = (int) TimeUnit.SECONDS.toMillis(10);
-    private static final int CACHE_EXPIRY_LONG = (int) TimeUnit.MINUTES.toMillis(10);
 
     protected final ExpiringCache<PentairControllerStatus> controllerStatusCache = new ExpiringCache<>(CACHE_EXPIRY);
     protected final ExpiringCache<PentairHeatStatus> heatStatusCache = new ExpiringCache<>(CACHE_EXPIRY);
@@ -120,7 +118,9 @@ public class PentairControllerHandler extends PentairBaseThingHandler {
     public void goOnline() {
         // Only a single controller is supported on the Pentair bus so prevent multiple controller
         // things being created.
-        if (onlineController != null) {
+        PentairControllerHandler handler = Objects.requireNonNull(getBridgeHandler()).findController();
+
+        if (handler != null && !handler.equals(this)) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
                     "Another controller is already configured.");
         } else {
@@ -134,13 +134,13 @@ public class PentairControllerHandler extends PentairBaseThingHandler {
 
         // setup syncTimeJob to run once a day, initial time to sync is 3 minutes after controller goes online. This is
         // to prevent collision with main thread queries on initial startup
-        syncTimeJob = scheduler.scheduleWithFixedDelay(() -> syncTime(), 3, 24 * 60 * 60, TimeUnit.MINUTES);
+        syncTimeJob = scheduler.scheduleWithFixedDelay(this::syncTime, 3, 24 * 60 * 60, TimeUnit.MINUTES);
 
         scheduler.execute(() -> readControllerSettings());
     }
 
     public void syncTime() {
-        boolean synctime = ((boolean) getConfig().get("synctime"));
+        boolean synctime = ((boolean) getConfig().get(CONTROLLER_CONFIGSYNCTIME));
         if (synctime) {
             logger.debug("Synchronizing System Time with Pentair controller");
             Calendar now = Calendar.getInstance();
@@ -170,20 +170,21 @@ public class PentairControllerHandler extends PentairBaseThingHandler {
 
     @Override
     public void goOffline(ThingStatusDetail detail) {
+        ScheduledFuture<?> syncTimeJob;
+
         super.goOffline(detail);
 
+        syncTimeJob = this.syncTimeJob;
         if (syncTimeJob != null) {
             syncTimeJob.cancel(true);
         }
-
-        onlineController = null;
     }
 
     public @Nullable PentairControllerCircuit getCircuitByGroupID(String groupID) {
         for (ExpiringCache<PentairControllerCircuit> circuitItem : circuitsCache) {
             PentairControllerCircuit circuit = circuitItem.getLastKnownValue();
             if (circuit == null) {
-                break;
+                continue;
             }
 
             if (circuit.getGroupID().equals(groupID)) {
@@ -195,25 +196,30 @@ public class PentairControllerHandler extends PentairBaseThingHandler {
     }
 
     public int getScheduleNumber(String name) {
-        int i;
+        int scheduleNum;
 
-        for (i = 1; i <= NUM_SCHEDULES; i++) {
-            String str = String.format(CONTROLLER_SCHEDULE, i);
-            if (str.equals(name)) {
-                return i;
-            }
+        scheduleNum = Integer.parseInt(name.substring(CONTROLLER_SCHEDULE.length()));
+
+        if (scheduleNum < 1 || scheduleNum > NUM_SCHEDULES) {
+            return 0;
         }
 
-        return 0;
+        return scheduleNum;
     }
 
     public Unit<Temperature> getUOM() {
         return (this.uom) ? SIUnits.CELSIUS : ImperialUnits.FAHRENHEIT;
     }
 
-    public QuantityType<Temperature> getWaterTemp() {
+    // public QuantityType<Temperature> getWaterTemp() {
+
+    public State getWaterTemp() {
         PentairControllerStatus status = this.controllerStatusCache.getLastKnownValue();
-        Objects.requireNonNull(status);
+
+        if (status == null) {
+            return UnDefType.UNDEF;
+        }
+
         return new QuantityType<Temperature>(status.poolTemp, getUOM());
     }
 
@@ -334,7 +340,7 @@ public class PentairControllerHandler extends PentairBaseThingHandler {
                 if (!(command instanceof StringType)) {
                     break;
                 }
-                String str = ((StringType) command).toString();
+                String str = command.toString();
                 LightMode lightMode;
 
                 try {
@@ -370,7 +376,7 @@ public class PentairControllerHandler extends PentairBaseThingHandler {
                 if (schedule == null) {
                     break;
                 }
-                String str = ((StringType) command).toString();
+                String str = command.toString();
                 // In order to prevent accidental programming of schedules by an inadvertent update, make sure the same
                 // value is written twice to this field within 5s. Only then will the schedule update command be
                 // sent to the controller.
@@ -433,7 +439,7 @@ public class PentairControllerHandler extends PentairBaseThingHandler {
                 if (schedule == null) {
                     break;
                 }
-                String days = ((StringType) command).toString();
+                String days = command.toString();
                 schedule.setDays(days);
                 break;
             }
@@ -615,7 +621,10 @@ public class PentairControllerHandler extends PentairBaseThingHandler {
         PentairPacket p;
 
         p = schedule.getWritePacket(id, preambleByte);
-        Objects.requireNonNull(p);
+        if (p == null) {
+            logger.debug("Schedule {} type is unknown.", id);
+            return false;
+        }
 
         logger.debug("saveSchedule: {}", p.toString());
         schedule.setDirty(false);
@@ -839,16 +848,11 @@ public class PentairControllerHandler extends PentairBaseThingHandler {
                 if (index < 0 || index >= NUM_CIRCUITS) {
                     break;
                 }
-
                 PentairControllerCircuit circuit = new PentairControllerCircuit(index + 1, CIRCUIT_GROUPS[index]);
-
                 circuit.setName(p.getByte(2));
                 circuit.setFunction(p.getByte(1));
-
                 refreshCircuitChannels(null, circuit);
-
                 circuitsCache[index].putValue(circuit);
-
                 logger.debug("Circuit Names - Circuit: {}, Function: {}, Name: {}", circuit.id,
                         circuit.circuitFunction.getFriendlyName(), circuit.circuitName.getFriendlyName());
                 break;
@@ -861,17 +865,11 @@ public class PentairControllerHandler extends PentairBaseThingHandler {
                 }
 
                 PentairControllerSchedule schedule = new PentairControllerSchedule();
-
                 schedule.parsePacket(p);
-
                 String groupID = schedule.getGroupID();
-
                 logger.debug("Controller schedule group: {}", groupID);
-
                 refreshScheduleChannels(null, schedule);
-
                 schedulesCache[id - 1].putValue(schedule);
-
                 logger.debug(
                         "Controller Schedule - ID: {}, Type: {}, Circuit: {}, Start Time: {}:{}, End Time: {}:{}, Days: {}",
                         schedule.id, schedule.type, schedule.circuit, schedule.start / 60, schedule.start % 60,
@@ -972,32 +970,25 @@ public class PentairControllerHandler extends PentairBaseThingHandler {
                 logger.debug("refreshScheduleChannels: schedule group is not aligned with channel");
             }
         }
-
         if (fullChannelUID == null || channelID.equals(CONTROLLER_SCHEDULESTRING)) {
             updateChannel(schedule.getGroupID(), CONTROLLER_SCHEDULESTRING, schedule.toString());
         }
-
         if (fullChannelUID == null || channelID.equals(CONTROLLER_SCHEDULETYPE)) {
             logger.debug("groupID: {}, scheduleType: {}", schedule.getGroupID(), schedule.getScheduleTypeStr());
             updateChannel(schedule.getGroupID(), CONTROLLER_SCHEDULETYPE, schedule.getScheduleTypeStr());
         }
-
         if (fullChannelUID == null || channelID.equals(CONTROLLER_SCHEDULECIRCUIT)) {
             updateChannel(schedule.getGroupID(), CONTROLLER_SCHEDULECIRCUIT, schedule.circuit);
         }
-
         if (fullChannelUID == null || channelID.equals(CONTROLLER_SCHEDULESTART)) {
             updateChannel(schedule.getGroupID(), CONTROLLER_SCHEDULESTART, schedule.start);
         }
-
         if (fullChannelUID == null || channelID.equals(CONTROLLER_SCHEDULEEND)) {
             updateChannel(schedule.getGroupID(), CONTROLLER_SCHEDULEEND, schedule.end);
         }
-
         if (fullChannelUID == null || channelID.equals(CONTROLLER_SCHEDULEDAYS)) {
             updateChannel(schedule.getGroupID(), CONTROLLER_SCHEDULEDAYS, schedule.getDays());
         }
-
         logger.debug(
                 "Controller Schedule - ID: {}, Type: {}, Circuit: {}, Start Time: {}:{}, End Time: {}:{}, Days: {}",
                 schedule.id, schedule.type, schedule.circuit, schedule.start / 60, schedule.start % 60,
@@ -1130,5 +1121,9 @@ public class PentairControllerHandler extends PentairBaseThingHandler {
         if (updateAll || channelID.equals(CONTROLLER_CIRCUITFUNCTION)) {
             updateChannel(circuit.getGroupID(), CONTROLLER_CIRCUITFUNCTION, circuit.circuitFunction.getFriendlyName());
         }
+    }
+
+    public boolean getServiceMode() {
+        return serviceMode;
     }
 }
