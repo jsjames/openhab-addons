@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2010-2020 Contributors to the openHAB project
+ * Copyright (c) 2010-2021 Contributors to the openHAB project
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information.
@@ -67,7 +67,7 @@ public class PentairDiscoveryService extends AbstractDiscoveryService implements
         ThingUID uid = new ThingUID(CONTROLLER_THING_TYPE, bridgeUID, CONTROLLER);
 
         DiscoveryResult result = DiscoveryResultBuilder.create(uid).withBridge(bridgeUID).withProperty(PARAMETER_ID, id)
-                .withLabel("Controller").withRepresentationProperty(CONTROLLER_PROPERTYID).build();
+                .withLabel("Controller").build();
         thingDiscovered(result);
         logger.debug("Discovered Controller {}", uid);
     }
@@ -80,7 +80,7 @@ public class PentairDiscoveryService extends AbstractDiscoveryService implements
         ThingUID uid = new ThingUID(INTELLIFLO_THING_TYPE, bridgeUID, "pump" + pumpid);
 
         DiscoveryResult result = DiscoveryResultBuilder.create(uid).withBridge(bridgeUID).withProperty(PARAMETER_ID, id)
-                .withLabel("Pump").withRepresentationProperty(CONTROLLER_PROPERTYID).build();
+                .withLabel("Pump").build();
         thingDiscovered(result);
         logger.debug("Discovered Pump {}", uid);
     }

@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2010-2020 Contributors to the openHAB project
+ * Copyright (c) 2010-2021 Contributors to the openHAB project
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information.
@@ -9,7 +9,7 @@
  * http://www.eclipse.org/legal/epl-2.0
  *
  * SPDX-License-Identifier: EPL-2.0
-*/
+ */
 package org.openhab.binding.pentair.internal;
 
 import java.io.IOException;
@@ -123,7 +123,7 @@ public class PentairParser implements Runnable {
                         parserstate = ParserState.WAIT_STARTOFPACKET; // any break caused by invalid packet will go
                                                                       // back to waiting for a new start of packet
 
-                        logger.debug("Receieved Pentair Command");
+                        logger.debug("Received Pentair Command");
 
                         if (c != 0xFF) {
                             logger.trace("parser: FF00 !FF");

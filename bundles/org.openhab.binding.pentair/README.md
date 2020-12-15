@@ -37,7 +37,6 @@ Note: If you are on a Linux system, the framework may not see a symbolically lin
 To use a symbolically linked device, add the following line to */etc/default/openhab* `EXTRA_JAVA_OPTS="-Dgnu.io.rxtx.SerialPorts=/dev/ttyRS485"`
 =======
 Note: This is the setup utilized for the majority of my testing of this binding.
->>>>>>> Added automotic discovery of devices
 
 Once you have the interface connected to your system, it is best to test basic connectivity.
 Note the protocol is a binary protocol (not ASCII text based) and in order to view the communication packets, one must use a program capable of a binary/HEX mode.
@@ -98,13 +97,6 @@ The following table shows the parameters for each Bridge.
 |               | pollPeriod - Period of time in minutes between the poll command being sent to the IT-100 bridge - Not Required - default=1. |
 |               | id - ID to use when communciating on Pentair control bus - default = 34. |
 
-<<<<<<< HEAD
-Currently automatic discovery is not supported.
-Here is an example of a thing configuration file called 'pentair.things':
-=======
-
-Here is an example of a thing configuration file called 'pentair.things' for using the ip_bridge:
->>>>>>> Added automotic discovery of devices
 
 ```
 Bridge pentair:ip_bridge:1 [ address="192.168.1.202", port=10001 ] {
@@ -308,7 +300,4 @@ sitemap pool label="Pool stuff" {
 Setting up RS485 and basic protocol - https://www.sdyoung.com/home/decoding-the-pentair-easytouch-rs-485-protocol/
 ser2sock GitHub - https://github.com/nutechsoftware/ser2sock
 nodejs-poolController - https://github.com/tagyoureit/nodejs-poolController
-
-
-## Future Enhancements
 

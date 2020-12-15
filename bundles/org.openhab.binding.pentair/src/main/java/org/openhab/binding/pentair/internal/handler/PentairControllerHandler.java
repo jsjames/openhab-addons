@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2010-2020 Contributors to the openHAB project
+ * Copyright (c) 2010-2021 Contributors to the openHAB project
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information.
@@ -324,13 +324,11 @@ public class PentairControllerHandler extends PentairBaseThingHandler {
         switch (channelUID.getIdWithoutGroup()) {
             case CONTROLLER_CIRCUITSWITCH: {
                 if (!(command instanceof OnOffType)) {
+                    logger.trace("Command is not OnOffType");
                     break;
                 }
-                PentairControllerCircuit circuit = getCircuitByGroupID(groupId);
-                if (circuit == null) {
-                    break;
-                }
-                int circuitNum = circuit.id;
+
+                int circuitNum = PentairControllerCircuit.getCircuitNumberByGroupID(groupId);
                 boolean state = command == OnOffType.ON;
 
                 circuitSwitch(circuitNum, state);
@@ -482,7 +480,7 @@ public class PentairControllerHandler extends PentairBaseThingHandler {
         byte[] packet = { (byte) 0xA5, (byte) preambleByte, (byte) id, (byte) 0x00 /* source */, (byte) 0x86,
                 (byte) 0x02, (byte) circuit, (byte) ((state) ? 1 : 0) };
 
-        logger.trace("circuit Switch: {}, {}", circuit, state);
+        logger.debug("circuit Switch: {}, {}", circuit, state);
 
         if (!writePacket(packet, 0x01, 1)) {
             logger.trace("circuitSwitch: Timeout");
