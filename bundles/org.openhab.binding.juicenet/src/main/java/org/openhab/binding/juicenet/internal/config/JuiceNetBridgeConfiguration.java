@@ -24,6 +24,6 @@ public class JuiceNetBridgeConfiguration {
     /**
      * Sample configuration parameters. Replace with your own.
      */
-    public String apiToken = "";
+    public String api_token = "";
     public int refreshInterval;
 }
