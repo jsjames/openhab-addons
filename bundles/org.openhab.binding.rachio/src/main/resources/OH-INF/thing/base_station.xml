@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<thing:thing-descriptions bindingId="rachio"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:thing="https://openhab.org/schemas/thing-description/v1.0.0"
+	xsi:schemaLocation="https://openhab.org/schemas/thing-description/v1.0.0 https://openhab.org/schemas/thing-description-1.0.0.xsd">
+
+	<bridge-type id="base-station">
+		<supported-bridge-type-refs>
+			<bridge-type-ref id="cloud"/>
+		</supported-bridge-type-refs>
+
+		<label>Rachio Sprinkler Base Station</label>
+		<description>Rachio Base Station for communication with Smart Hose valves</description>
+		<semantic-equipment-tag>WirelessAccessPoint</semantic-equipment-tag>
+
+		<representation-property>id</representation-property>
+
+		<config-description>
+			<parameter name="id" type="text">
+				<label>Base Station ID</label>
+				<description>ID of rachio base station</description>
+				<required>true</required>
+			</parameter>
+		</config-description>
+	</bridge-type>
+</thing:thing-descriptions>

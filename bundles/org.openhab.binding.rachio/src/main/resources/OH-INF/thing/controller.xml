@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<thing:thing-descriptions bindingId="rachio"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:thing="https://openhab.org/schemas/thing-description/v1.0.0"
+	xsi:schemaLocation="https://openhab.org/schemas/thing-description/v1.0.0 https://openhab.org/schemas/thing-description-1.0.0.xsd">
+
+	<bridge-type id="controller">
+		<supported-bridge-type-refs>
+			<bridge-type-ref id="cloud"/>
+		</supported-bridge-type-refs>
+
+		<label>Rachio Sprinkler Controller</label>
+		<description>The things controls one sprinkler controller, which might have multiple zones.</description>
+		<semantic-equipment-tag>Irrigation</semantic-equipment-tag>
+
+		<channels>
+			<channel id="name" typeId="name"/>
+			<channel id="active" typeId="active"/>
+			<channel id="runningZoneNumber" typeId="runningZoneNumber"/>
+			<channel id="runningZoneName" typeId="runningZoneName"/>
+			<channel id="run" typeId="run"/>
+			<channel id="player" typeId="player"/>
+			<channel id="runZones" typeId="runZones"/>
+			<channel id="runTime" typeId="runTime"/>
+			<channel id="rainDelay" typeId="rainDelay"/>
+			<channel id="rainDelayUntil" typeId="rainDelayUntil"/>
+			<channel id="rainSensorTripped" typeId="rainSensorTripped"/>
+			<channel id="lastUpdate" typeId="lastUpdate"/>
+			<channel id="lastEvent" typeId="lastEvent"/>
+			<channel id="lastEventTime" typeId="lastEventTime"/>
+			<channel id="scheduleName" typeId="scheduleName"/>
+			<channel id="scheduleInfo" typeId="scheduleInfo"/>
+			<channel id="scheduleStart" typeId="scheduleStart"/>
+			<channel id="scheduleEnd" typeId="scheduleEnd"/>
+		</channels>
+
+		<representation-property>id</representation-property>
+
+		<config-description>
+			<parameter name="id" type="text">
+				<label>Controller ID</label>
+				<description>ID of rachio controller.</description>
+				<required>true</required>
+			</parameter>
+			<parameter name="defaultRunTime" type="integer" unit="min">
+				<label>Default Run Time</label>
+				<description>Default zone run time</description>
+				<default>10</default>
+				<unitLabel>min</unitLabel>
+			</parameter>
+		</config-description>
+	</bridge-type>
+
+	<channel-type id="name">
+		<item-type>String</item-type>
+		<label>Name</label>
+		<description>The name of the sprinkler controller. This could be configured using the Rachio
+			App.</description>
+		<state readOnly="true"/>
+	</channel-type>
+	<channel-type id="active">
+		<item-type>Switch</item-type>
+		<label>Active</label>
+		<description>ON: Controller is active, OFF: Controller is suspended</description>
+	</channel-type>
+	<channel-type id="runningZoneNumber">
+		<item-type>Number</item-type>
+		<label>Running Zone Number</label>
+		<description>Number of zone currently running</description>
+		<state readOnly="true" pattern="%d"/>
+	</channel-type>
+	<channel-type id="runningZoneName">
+		<item-type>String</item-type>
+		<label>Running Zone Name</label>
+		<description>Name of zone currently running</description>
+		<state readOnly="true"/>
+	</channel-type>
+	<channel-type id="run">
+		<item-type>Switch</item-type>
+		<label>Run Multiple Zones</label>
+		<description>ON: start watering for selected zones (''=ALL), OFF: n/a</description>
+	</channel-type>
+	<channel-type id="player">
+		<item-type>Player</item-type>
+		<label>Player control for controller</label>
+	</channel-type>
+	<channel-type id="runZones">
+		<item-type>String</item-type>
+		<label>Run Zone List</label>
+		<description>Zones to run at the same time (''=run ALL)</description>
+	</channel-type>
+	<channel-type id="runTime">
+		<item-type>Number</item-type>
+		<label>Run Time</label>
+		<description>=0, use default run time, >0: Start zones for given number of seconds</description>
+	</channel-type>
+	<channel-type id="rainDelayUntil">
+		<item-type>DateTime</item-type>
+		<label>Rain Delay Until</label>
+		<description>Rain delay until a given DateTime</description>
+	</channel-type>
+	<channel-type id="rainDelay">
+		<item-type unitHint="day">Number:Time</item-type>
+		<label>Rain Delay</label>
+		<description>Puts controller in rain delay mode for the specified duration</description>
+		<state min="1" max="7" step="0.1" pattern="%.1f %unit%"/>
+	</channel-type>
+	<channel-type id="rainSensorTripped">
+		<item-type>Switch</item-type>
+		<label>Rain Sensor Tripped</label>
+		<description>>ON: The rain sensor is in tripped state</description>
+	</channel-type>
+	<channel-type id="lastUpdate">
+		<item-type>DateTime</item-type>
+		<label>Last Update</label>
+		<description>Timestamp of last status update.</description>
+	</channel-type>
+	<channel-type id="lastEvent">
+		<item-type>String</item-type>
+		<label>Last Event</label>
+		<description>Events can be received when callback is configured.</description>
+	</channel-type>
+	<channel-type id="lastEventTime">
+		<item-type>DateTime</item-type>
+		<label>Last Event Time</label>
+		<description>Timestamp of last status update.</description>
+	</channel-type>
+	<channel-type id="scheduleName">
+		<item-type>String</item-type>
+		<label>Schedule Name</label>
+		<description>Name of schedule.</description>
+	</channel-type>
+	<channel-type id="scheduleInfo">
+		<item-type>String</item-type>
+		<label>Schedule Info</label>
+		<description>Brief description of schedule.</description>
+	</channel-type>
+	<channel-type id="scheduleStart">
+		<item-type>DateTime</item-type>
+		<label>Schedule Start</label>
+		<description>Start of schedule.</description>
+	</channel-type>
+	<channel-type id="scheduleEnd">
+		<item-type>DateTime</item-type>
+		<label>Schedule End</label>
+		<description>End of schedule.</description>
+	</channel-type>
+</thing:thing-descriptions>

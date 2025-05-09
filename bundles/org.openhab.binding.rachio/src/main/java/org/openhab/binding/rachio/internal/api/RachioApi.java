@@ -1,0 +1,693 @@
+/*
+ * Copyright (c) 2010-2025 Contributors to the openHAB project
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ */
+package org.openhab.binding.rachio.internal.api;
+
+import java.lang.reflect.Type;
+import java.nio.charset.StandardCharsets;
+import java.security.InvalidParameterException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
+
+import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
+import org.eclipse.jetty.client.HttpClient;
+import org.eclipse.jetty.client.api.ContentResponse;
+import org.eclipse.jetty.client.api.Request;
+import org.eclipse.jetty.client.util.StringContentProvider;
+import org.eclipse.jetty.http.HttpFields;
+import org.eclipse.jetty.http.HttpHeader;
+import org.eclipse.jetty.http.HttpMethod;
+import org.eclipse.jetty.http.HttpStatus;
+import org.openhab.binding.rachio.internal.api.dto.RachioApiBaseStation;
+import org.openhab.binding.rachio.internal.api.dto.RachioApiCurrentSchedule;
+import org.openhab.binding.rachio.internal.api.dto.RachioApiDevice;
+import org.openhab.binding.rachio.internal.api.dto.RachioApiEvent;
+import org.openhab.binding.rachio.internal.api.dto.RachioApiEventType;
+import org.openhab.binding.rachio.internal.api.dto.RachioApiPerson;
+import org.openhab.binding.rachio.internal.api.dto.RachioApiValve;
+import org.openhab.binding.rachio.internal.api.dto.RachioApiWebhook;
+import org.openhab.binding.rachio.internal.api.dto.RachioApiZone;
+import org.openhab.binding.rachio.internal.api.dto.RachioApiZoneRun;
+import org.openhab.binding.rachio.utils.ClientRateLimitManager;
+import org.openhab.binding.rachio.utils.ClientRateLimitManager.RateLimitThrottleException;
+import org.openhab.binding.rachio.utils.JsonArrayToMapSerializer;
+import org.openhab.core.library.types.RawType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonDeserializationContext;
+import com.google.gson.JsonDeserializer;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
+import com.google.gson.reflect.TypeToken;
+
+/**
+ * The {@link RachioApi} implements the interface to the Rachio cloud service (using http).
+ *
+ * @author Markus Michels - Initial contribution
+ */
+@NonNullByDefault
+public class RachioApi {
+    private final Logger logger = LoggerFactory.getLogger(RachioApi.class);
+
+    private static final String MD5_HASH_ALGORITHM = "MD5";
+
+    private static final String APIURL_BASE = "https://api.rach.io/1/public/";
+    private static final String APIURL_BASE2 = "https://cloud-rest.rach.io/";
+    public static final String API_PHOTO_BASE = "https://prod-media-photo.rach.io/";
+
+    private static final String APIURL_GET_PERSONID = APIURL_BASE + "person/info"; // obtain personId
+    private static final String APIURL_GET_PERSON = APIURL_BASE + "person/%s"; // obtain personId
+    private static final String APIURL_GET_DEVICE = APIURL_BASE + "device/%s"; // get device details, needs /<device id>
+    private static final String APIURL_GET_DEVICE_CURRENT_SCHEDULE = APIURL_BASE + "device/%s/current_schedule";
+    private static final String APIURL_GET_DEVICE_EVENT = APIURL_BASE + "device/%s/event";
+
+    private static final String APIURL_PUT_DEVICE_ON = APIURL_BASE + "device/on";
+    private static final String APIURL_PUT_DEVICE_OFF = APIURL_BASE + "device/off";
+    private static final String APIURL_PUT_DEVICE_STOP = APIURL_BASE + "device/stop_water";
+    private static final String APIURL_PUT_DEVICE_RAIN_DELAY = APIURL_BASE + "device/rain_delay";
+    private static final String APIURL_PUT_DEVICE_PAUSE_RUN = APIURL_BASE + "device/pause_zone_run";
+    private static final String APIURL_PUT_DEVICE_RESUME_RUN = APIURL_BASE + "device/resume_zone_run";
+    private static final String APIURL_POST_CREATE_WEBHOOK = APIURL_BASE + "webhook/createWebhook";
+
+    private static final String APIURL_GET_LIST_WEBHOOKS = APIURL_BASE + "webhook/listWebhooks";
+    private static final String APIURL_GET_LIST_WEBHOOKS_DEVICE = APIURL_BASE
+            + "webhook/listWebhooks/resource_id.irrigation_controller_id=%s";
+    private static final String APIURL_GET_LIST_WEBHOOKS_PROGRAM = APIURL_BASE
+            + "webhook/listWebhooks/resource_id.program_id=%s";
+    private static final String APIURL_GET_LIST_WEBHOOKS_VALVE = APIURL_BASE
+            + "webhook/listWebhooks/resource_id.valve_id=%s";
+    private static final String APIURL_DELETE_WEBHOOK = APIURL_BASE + "webhook/deleteWebhook/%s";
+    private static final String APIURL_DELETE_WEBHOOK_DEVICE = APIURL_BASE
+            + "webhook/deleteAllWebhooks/resource_id.irrigation_controller_id=%s";
+    private static final String APIURL_DELETE_WEBHOOK_PROGRAM = APIURL_BASE
+            + "webhook/deleteAllWebhooks/resource_id.program_id=%s";
+    private static final String APIURL_DELETE_WEBHOOK_VALVE = APIURL_BASE
+            + "webhook/deleteAllWebhooks/resource_id.valve_id=%s";
+    private static final String APIURL_GET_LIST_WEBHOOK_EVENT_TYPES = APIURL_BASE + "webhook/listWebhookEventTypes";
+    private static final String APIURL_GET_LIST_WEBHOOK_EVENT_TYPES_DEVICE = APIURL_BASE
+            + "webhook/listWebhookEventTypes/resource_id.irrigation_controller_id=%s";
+    private static final String APIURL_GET_LIST_WEBHOOK_EVENT_TYPES_PROGRAM = APIURL_BASE
+            + "webhook/listWebhookEventTypes/resource_id.program_id=%s";
+    private static final String APIURL_GET_LIST_WEBHOOK_EVENT_TYPES_VALVE = APIURL_BASE
+            + "webhook/listWebhookEventTypes/resource_id.valve_id=%s";
+
+    private static final String APIURL_GET_ZONE = APIURL_BASE + "zone/%s";
+    private static final String APIURL_PUT_ZONE_START = APIURL_BASE + "zone/start";
+    private static final String APIURL_PUT_ZONE_MULTIPLE_START = APIURL_BASE + "zone/start_multiple";
+    private static final String APIURL_PUT_ZONE_MOISTURE_LEVEL = APIURL_BASE + "zone/setMoistureLevel";
+    private static final String APIURL_PUT_ZONE_MOISTURE_PERCENT = APIURL_BASE + "zone/setMoisturePercent";
+    private static final String APIURL_PUT_ZONE_ENABLE = APIURL_BASE + "zone/enable";
+    private static final String APIURL_PUT_ZONE_DISABLE = APIURL_BASE + "zone/disable";
+
+    private static final String APIURL_GET_BASE_STATION = APIURL_BASE2 + "valve/getBaseStation/%s";
+    private static final String APIURL_GET_BASE_STATIONS = APIURL_BASE2 + "valve/listBaseStations/%s";
+    private static final String APIURL_GET_VALVE = APIURL_BASE2 + "valve/getValve/%s";
+    private static final String APIURL_GET_VALVES = APIURL_BASE2 + "valve/listValves/%s";
+    private static final String APIURL_PUT_VALVE_START_WATERING = APIURL_BASE2 + "valve/startWatering";
+    private static final String APIURL_PUT_VALVE_STOP_WATERING = APIURL_BASE2 + "valve/stopWatering";
+    private static final String APIURL_PUT_VALVE_DEFAULT_RUNTIME = APIURL_BASE2 + "valve/setDefaultRuntime";
+
+    private static final String APIURL_PUT_SCHEDULE_SKIP_FORWARD = APIURL_BASE + "schedulerule/skip_forward_zone_run";
+
+    public static final String RACHIO_JSON_RATE_LIMIT = "X-RateLimit-Limit";
+    public static final String RACHIO_JSON_RATE_REMAINING = "X-RateLimit-Remaining";
+    public static final String RACHIO_JSON_RATE_RESET = "X-RateLimit-Reset";
+
+    private static final String CONTENT_TYPE_JSON = "application/json";
+
+    private static final int API_TIMEOUT = 15;
+
+    protected String apiKey = "";
+
+    private ClientRateLimitManager rateLimitManager = new ClientRateLimitManager(5, Duration.ofMinutes(1));
+
+    protected static final Integer EXTERNAL_ID_SALT = (int) (Math.random() * 50 + 1);
+
+    private final JsonDeserializer<Date> dateDeserializer = (@Nullable JsonElement json, @Nullable Type typeOfT,
+            @Nullable JsonDeserializationContext context) -> json == null ? null : new Date(json.getAsLong());
+
+    private final JsonDeserializer<Instant> instantDeserializer = (@Nullable JsonElement json, @Nullable Type typeOfT,
+            @Nullable JsonDeserializationContext context) -> json == null ? null : Instant.parse(json.getAsString());
+
+    // deserialize JsonArrays to HashMaps with the id as key
+    private final Gson gson = new GsonBuilder() //
+            .registerTypeAdapter(Date.class, dateDeserializer) //
+            .registerTypeAdapter(Instant.class, instantDeserializer) //
+            .registerTypeAdapter(RachioId.Person.class,
+                    new RachioId.RachioIdDeserializer<RachioId.Person>(RachioId.Person.class)) //
+            .registerTypeAdapter(RachioId.Zone.class,
+                    new RachioId.RachioIdDeserializer<RachioId.Zone>(RachioId.Zone.class)) //
+            .registerTypeAdapter(RachioId.Device.class,
+                    new RachioId.RachioIdDeserializer<RachioId.Device>(RachioId.Device.class)) //
+            .registerTypeAdapter(RachioId.Schedule.class,
+                    new RachioId.RachioIdDeserializer<RachioId.Schedule>(RachioId.Schedule.class)) //
+            .registerTypeAdapter(RachioId.Webhook.class,
+                    new RachioId.RachioIdDeserializer<RachioId.Webhook>(RachioId.Webhook.class)) //
+            .registerTypeAdapter(RachioId.BaseStation.class,
+                    new RachioId.RachioIdDeserializer<RachioId.BaseStation>(RachioId.BaseStation.class)) //
+            .registerTypeAdapter(RachioId.Valve.class,
+                    new RachioId.RachioIdDeserializer<RachioId.Valve>(RachioId.Valve.class)) //
+            .registerTypeAdapter(RachioId.Program.class,
+                    new RachioId.RachioIdDeserializer<RachioId.Program>(RachioId.Program.class)) //
+            .registerTypeAdapter(new TypeToken<Map<RachioId.Device, RachioApiDevice>>() {
+            }.getType(),
+                    new JsonArrayToMapSerializer<RachioId.Device, RachioApiDevice>(v -> v.getId(),
+                            RachioApiDevice.class)) //
+            .registerTypeAdapter(new TypeToken<Map<RachioId.Zone, RachioApiZone>>() {
+            }.getType(),
+                    new JsonArrayToMapSerializer<RachioId.Zone, RachioApiZone>(v -> v.getId(), RachioApiZone.class)) //
+            .registerTypeAdapter(new TypeToken<Map<RachioId.Valve, RachioApiValve>>() {
+            }.getType(),
+                    new JsonArrayToMapSerializer<RachioId.Valve, RachioApiValve>(v -> v.getId(), RachioApiValve.class)) //
+            .registerTypeAdapter(new TypeToken<Map<RachioId.BaseStation, RachioApiBaseStation>>() {
+            }.getType(),
+                    new JsonArrayToMapSerializer<RachioId.BaseStation, RachioApiBaseStation>(v -> v.getId(),
+                            RachioApiBaseStation.class)) //
+            .create();
+    private HttpClient httpClient;
+
+    public RachioApi(final HttpClient httpClient) {
+        this.httpClient = httpClient;
+    }
+
+    public String getExternalId() {
+        // return a salted ash of the apikey
+        String hash = "OH_" + getMD5Hash(apiKey) + "_" + EXTERNAL_ID_SALT.toString();
+        return getMD5Hash(hash);
+    }
+
+    public void initialize(String apiKey) throws RachioApiException {
+        this.apiKey = apiKey;
+    }
+
+    /*
+     * PERSON SERVICE API
+     */
+
+    public RachioId.Person getPersonId() throws InterruptedException, TimeoutException, ExecutionException,
+            RachioApiException, RateLimitThrottleException {
+        Request request = httpClient.newRequest(APIURL_GET_PERSONID);
+        ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
+
+        JsonObject jsonResponse = JsonParser.parseString(response.getContentAsString()).getAsJsonObject();
+
+        return new RachioId.Person(jsonResponse.get("id").getAsString());
+    }
+
+    public RachioApiPerson getPerson(RachioId.Person personId) throws InterruptedException, TimeoutException,
+            ExecutionException, RachioApiException, RateLimitThrottleException {
+        String url = String.format(APIURL_GET_PERSON, personId.id());
+        Request request = httpClient.newRequest(url);
+        ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.LOW);
+
+        return apiRequireNonNull(gson.fromJson(response.getContentAsString(), RachioApiPerson.class));
+    }
+
+    /*
+     * DEVICE SERVICE APIS
+     */
+
+    public RachioApiDevice getDevice(RachioId.Device deviceId) throws InterruptedException, TimeoutException,
+            ExecutionException, RachioApiException, RateLimitThrottleException {
+        String url = String.format(APIURL_GET_DEVICE, deviceId.id());
+        Request request = httpClient.newRequest(url);
+        ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.LOW);
+
+        return apiRequireNonNull(gson.fromJson(response.getContentAsString(), RachioApiDevice.class));
+    }
+
+    public RachioApiCurrentSchedule getDeviceCurrentSchedule(RachioId.Device deviceId) throws InterruptedException,
+            TimeoutException, ExecutionException, RachioApiException, RateLimitThrottleException {
+        String url = String.format(APIURL_GET_DEVICE_CURRENT_SCHEDULE, deviceId.id());
+        Request request = httpClient.newRequest(url).method(HttpMethod.GET);
+        ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.MED);
+
+        return apiRequireNonNull(gson.fromJson(response.getContentAsString(), RachioApiCurrentSchedule.class));
+    }
+
+    public List<RachioApiEvent> getDeviceEvents(RachioId.Device deviceId, Instant startTime, Instant endTime)
+            throws InterruptedException, TimeoutException, ExecutionException, RachioApiException,
+            RateLimitThrottleException {
+        logger.trace("getDeviceEvent for device '{}'", deviceId.id());
+        String url = String.format(APIURL_GET_DEVICE_EVENT, deviceId.id());
+        Request request = httpClient.newRequest(url).method(HttpMethod.GET)
+                .param("startTime", String.valueOf(startTime.toEpochMilli()))
+                .param("endTime", String.valueOf(endTime.toEpochMilli()));
+        ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.LOW);
+
+        return apiRequireNonNull(gson.fromJson(response.getContentAsString(), new TypeToken<List<RachioApiEvent>>() {
+        }.getType()));
+    }
+
+    public void putStopWatering(RachioId.Device deviceId) throws RachioApiException, InterruptedException,
+            TimeoutException, ExecutionException, RateLimitThrottleException {
+        logger.debug("Stop watering for device '{}'", deviceId.id());
+        Request request = httpClient.newRequest(APIURL_PUT_DEVICE_STOP).method(HttpMethod.PUT).param("id",
+                deviceId.id());
+        sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
+    }
+
+    public void putDeviceRainDelay(RachioId.Device deviceId, long duration) throws RachioApiException,
+            InterruptedException, TimeoutException, ExecutionException, RateLimitThrottleException {
+        logger.debug("Start dain relay for device '{}'.", deviceId.id());
+        JsonObject bodyParamJson = new JsonObject();
+        bodyParamJson.addProperty("id", deviceId.id());
+        bodyParamJson.addProperty("duration", duration);
+        Request request = httpClient.newRequest(APIURL_PUT_DEVICE_RAIN_DELAY).method(HttpMethod.PUT).content(
+                new StringContentProvider(CONTENT_TYPE_JSON, bodyParamJson.toString(), StandardCharsets.UTF_8));
+        sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
+    }
+
+    public void enableDevice(RachioId.Device deviceId, boolean enable) throws RachioApiException, InterruptedException,
+            TimeoutException, ExecutionException, RateLimitThrottleException {
+        logger.debug("enable device '{}' - {}.", deviceId.id(), enable);
+        String url = (enable) ? APIURL_PUT_DEVICE_ON : APIURL_PUT_DEVICE_OFF;
+        JsonObject bodyParamJson = new JsonObject();
+        bodyParamJson.addProperty("id", deviceId.id());
+        Request request = httpClient.newRequest(url).method(HttpMethod.PUT).content(
+                new StringContentProvider(CONTENT_TYPE_JSON, bodyParamJson.toString(), StandardCharsets.UTF_8));
+        sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
+    }
+
+    public void pauseZoneRun(RachioId.Device deviceId, long duration, boolean pause) throws InterruptedException,
+            TimeoutException, ExecutionException, RachioApiException, RateLimitThrottleException {
+        logger.debug("Pause device '{}' for {} sec - {}.", deviceId.id(), duration, pause);
+        String url = (pause) ? APIURL_PUT_DEVICE_PAUSE_RUN : APIURL_PUT_DEVICE_RESUME_RUN;
+        JsonObject bodyParamJson = new JsonObject();
+        bodyParamJson.addProperty("id", deviceId.id());
+        bodyParamJson.addProperty("duration", String.valueOf(duration));
+        Request request = httpClient.newRequest(url).method(HttpMethod.PUT).content(
+                new StringContentProvider(CONTENT_TYPE_JSON, bodyParamJson.toString(), StandardCharsets.UTF_8));
+        sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
+    }
+
+    /*
+     * ZONE SERVICE API
+     */
+
+    public RachioApiZone getZone(RachioId.Zone zoneId) throws InterruptedException, TimeoutException,
+            ExecutionException, RachioApiException, RateLimitThrottleException {
+
+        String url = String.format(APIURL_GET_ZONE, zoneId.id());
+        Request request = httpClient.newRequest(url);
+        ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.LOW);
+
+        return apiRequireNonNull(gson.fromJson(response.getContentAsString(), RachioApiZone.class));
+    }
+
+    public void putZoneStartWatering(RachioId.Zone zoneId, int duration) throws RachioApiException,
+            InterruptedException, TimeoutException, ExecutionException, RateLimitThrottleException {
+        logger.debug("Start watering Zone '{}' for {} sec.", zoneId.id(), duration);
+
+        JsonObject bodyParamJson = new JsonObject();
+        bodyParamJson.addProperty("id", zoneId.id());
+        bodyParamJson.addProperty("duration", duration);
+        Request request = httpClient.newRequest(APIURL_PUT_ZONE_START).method(HttpMethod.PUT)
+                .param("id", zoneId.toString()).content(
+                        new StringContentProvider(CONTENT_TYPE_JSON, bodyParamJson.toString(), StandardCharsets.UTF_8));
+        sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
+    }
+
+    public void putZoneStartMultiple(List<RachioId.Zone> zoneList, int duration) throws RachioApiException,
+            InterruptedException, TimeoutException, ExecutionException, RateLimitThrottleException {
+        logger.debug("Start multiple zones '{}'.", zoneList.toString());
+
+        List<RachioApiZoneRun> apiZoneRunList = new ArrayList<>();
+        for (int i = 0; i < zoneList.size(); i++) {
+            apiZoneRunList.add(new RachioApiZoneRun(zoneList.get(i), duration, i));
+        }
+
+        Request request = httpClient.newRequest(APIURL_PUT_ZONE_MULTIPLE_START).method(HttpMethod.PUT).content(
+                new StringContentProvider(CONTENT_TYPE_JSON, gson.toJson(apiZoneRunList), StandardCharsets.UTF_8));
+        sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
+    }
+
+    public void putZoneMoistureLevel(RachioId.Zone zoneId, int level) throws InterruptedException, TimeoutException,
+            ExecutionException, RachioApiException, RateLimitThrottleException {
+        logger.debug("Set moisture level zone '{}' to {}.", zoneId.id(), level);
+        Request request = httpClient.newRequest(APIURL_PUT_ZONE_MOISTURE_LEVEL).method(HttpMethod.PUT)
+                .param("id", zoneId.id()).param("level", String.valueOf(level));
+        sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
+    }
+
+    public void putZoneMoisturePercent(RachioId.Zone zoneId, int percent) throws InterruptedException, TimeoutException,
+            ExecutionException, RachioApiException, RateLimitThrottleException {
+        logger.debug("Set moisture level zone '{}' to {}%.", zoneId.id(), percent);
+        Request request = httpClient.newRequest(APIURL_PUT_ZONE_MOISTURE_PERCENT).method(HttpMethod.PUT)
+                .param("id", zoneId.id()).param("percent", String.valueOf(percent));
+        sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
+    }
+
+    public void putZoneEnable(RachioId.Zone zoneId) throws InterruptedException, TimeoutException, ExecutionException,
+            RachioApiException, RateLimitThrottleException {
+        String jsonBody = "{\"id\":\"" + zoneId.id() + "\"}";
+        Request request = httpClient.newRequest(APIURL_PUT_ZONE_ENABLE).method(HttpMethod.PUT)
+                .content(new StringContentProvider(CONTENT_TYPE_JSON, jsonBody, StandardCharsets.UTF_8));
+        sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
+    }
+
+    public void putZoneDisable(RachioId.Zone zoneId) throws InterruptedException, TimeoutException, ExecutionException,
+            RachioApiException, RateLimitThrottleException {
+        String jsonBody = "{\"id\":\"" + zoneId.id() + "\"}";
+        Request request = httpClient.newRequest(APIURL_PUT_ZONE_DISABLE).method(HttpMethod.PUT)
+                .content(new StringContentProvider(CONTENT_TYPE_JSON, jsonBody, StandardCharsets.UTF_8));
+        sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
+    }
+
+    @Nullable
+    public RawType getImageFromURL(String url) {
+        Request request = httpClient.newRequest(url).method(HttpMethod.GET);
+        ContentResponse response;
+        try {
+            response = request.send();
+        } catch (InterruptedException | TimeoutException | ExecutionException e) {
+            logger.error("Unable to retrieve image from {}: {}", url, e.getLocalizedMessage());
+            return null;
+        }
+
+        if (response.getStatus() != HttpStatus.OK_200) {
+            logger.error("Unable to retrieve image from {}", url);
+            return null;
+        }
+
+        return new RawType(response.getContent(), response.getMediaType());
+    }
+
+    /*
+     * SCHEDULE RULE API
+     */
+
+    public void putScheduleSkipForward(RachioId.Device deviceId) throws InterruptedException, TimeoutException,
+            ExecutionException, RachioApiException, RateLimitThrottleException {
+        String jsonBody = "{\"id\":\"" + deviceId.id() + "\"}";
+        Request request = httpClient.newRequest(APIURL_PUT_SCHEDULE_SKIP_FORWARD).method(HttpMethod.PUT)
+                .content(new StringContentProvider(CONTENT_TYPE_JSON, jsonBody, StandardCharsets.UTF_8));
+        sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
+    }
+
+    /*
+     * WEBHOOK SERVICE API
+     */
+
+    public RachioApiWebhook createWebhook(RachioId.Id id, String callbackUrl, String externalId,
+            List<String> eventTypes) throws JsonSyntaxException, RachioApiException, InterruptedException,
+            TimeoutException, ExecutionException, RateLimitThrottleException {
+
+        RachioApiWebhook webhook = new RachioApiWebhook();
+
+        webhook.url = callbackUrl;
+        webhook.externalId = externalId;
+        webhook.eventTypes = eventTypes;
+        if (id instanceof RachioId.Device deviceId) {
+            webhook.resourceId.irrigationControllerId = deviceId;
+        } else if (id instanceof RachioId.Program programId) {
+            webhook.resourceId.programId = programId;
+        } else if (id instanceof RachioId.Valve valveId) {
+            webhook.resourceId.valveId = valveId;
+        } else {
+            throw new InvalidParameterException("Invalid RachioID type: " + id.toString());
+        }
+
+        Request request = httpClient.newRequest(APIURL_POST_CREATE_WEBHOOK).method(HttpMethod.POST)
+                .content(new StringContentProvider(CONTENT_TYPE_JSON, gson.toJson(webhook)), CONTENT_TYPE_JSON);
+        ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
+
+        return apiRequireNonNull(gson.fromJson(response.getContentAsString(), RachioApiWebhook.class));
+    }
+
+    public List<RachioApiWebhook> getListWebhook(RachioId.Id rachioId) throws InterruptedException, TimeoutException,
+            ExecutionException, RachioApiException, RateLimitThrottleException {
+        String url = "";
+        if (rachioId instanceof RachioId.Device) {
+            url = APIURL_GET_LIST_WEBHOOKS_DEVICE;
+        } else if (rachioId instanceof RachioId.Valve) {
+            url = APIURL_GET_LIST_WEBHOOKS_VALVE;
+        } else if (rachioId instanceof RachioId.Program) {
+            url = APIURL_GET_LIST_WEBHOOKS_PROGRAM;
+        } else {
+            throw new IllegalArgumentException("Unsupported RachioId type: " + rachioId.getClass());
+        }
+        String.format(url, rachioId);
+
+        Request request = httpClient.newRequest(url).method(HttpMethod.GET);
+        ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
+
+        JsonElement jsonWebhooksArray = JsonParser.parseString(response.getContentAsString()).getAsJsonObject()
+                .get("webhooks");
+
+        return apiRequireNonNull(gson.fromJson(jsonWebhooksArray, new TypeToken<List<RachioApiWebhook>>() {
+        }.getType()));
+    }
+
+    public void deleteWebhook(RachioId.Webhook webhookId) throws InterruptedException, TimeoutException,
+            ExecutionException, RachioApiException, RateLimitThrottleException {
+        String url = String.format(APIURL_DELETE_WEBHOOK, webhookId.id());
+        Request request = httpClient.newRequest(url).method(HttpMethod.DELETE);
+        sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
+    }
+
+    public void deleteAllWebhooks(RachioId.Id rachioId) throws InterruptedException, TimeoutException,
+            ExecutionException, RachioApiException, RateLimitThrottleException {
+        String url;
+        if (rachioId instanceof RachioId.Device) {
+            url = APIURL_DELETE_WEBHOOK_DEVICE;
+        } else if (rachioId instanceof RachioId.Valve) {
+            url = APIURL_DELETE_WEBHOOK_VALVE;
+        } else if (rachioId instanceof RachioId.Program) {
+            url = APIURL_DELETE_WEBHOOK_PROGRAM;
+        } else {
+            throw new IllegalArgumentException("Unsupported RachioId type: " + rachioId.getClass());
+        }
+
+        url = String.format(url, rachioId.id());
+        Request request = httpClient.newRequest(url).method(HttpMethod.DELETE);
+        sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
+    }
+
+    public List<RachioApiEventType> getListWebhookEventTypes() throws InterruptedException, TimeoutException,
+            ExecutionException, RachioApiException, RateLimitThrottleException {
+        Request request = httpClient.newRequest(APIURL_GET_LIST_WEBHOOK_EVENT_TYPES).method(HttpMethod.GET);
+        ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
+
+        JsonElement listEventTypeArray = JsonParser.parseString(response.getContentAsString()).getAsJsonObject()
+                .get("eventTypes");
+
+        return apiRequireNonNull(gson.fromJson(listEventTypeArray, new TypeToken<List<RachioApiEventType>>() {
+        }.getType()));
+    }
+
+    public List<RachioApiEventType> getListWebhookEventTypes(RachioId.Id rachioId) throws InterruptedException,
+            TimeoutException, ExecutionException, RachioApiException, RateLimitThrottleException {
+        String url;
+        if (rachioId instanceof RachioId.Device) {
+            url = APIURL_GET_LIST_WEBHOOK_EVENT_TYPES_DEVICE;
+        } else if (rachioId instanceof RachioId.Valve) {
+            url = APIURL_GET_LIST_WEBHOOK_EVENT_TYPES_VALVE;
+        } else if (rachioId instanceof RachioId.Program) {
+            url = APIURL_GET_LIST_WEBHOOK_EVENT_TYPES_PROGRAM;
+        } else {
+            throw new IllegalArgumentException("Unsupported RachioId type: " + rachioId.getClass());
+        }
+        Request request = httpClient.newRequest(url).method(HttpMethod.GET);
+        ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
+
+        return apiRequireNonNull(
+                gson.fromJson(response.getContentAsString(), new TypeToken<List<RachioApiEventType>>() {
+                }.getType()));
+    }
+
+    /*
+     * Smart Hose Timer API
+     */
+
+    public RachioApiBaseStation getBaseStation(RachioId.BaseStation rachioIdBaseStation) throws InterruptedException,
+            TimeoutException, ExecutionException, RachioApiException, RateLimitThrottleException {
+        String url = String.format(APIURL_GET_BASE_STATION, rachioIdBaseStation.id());
+        Request request = httpClient.newRequest(url).method(HttpMethod.GET);
+        ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
+
+        JsonElement jsonBaseStation = JsonParser.parseString(response.getContentAsString()).getAsJsonObject()
+                .get("baseStation");
+
+        return apiRequireNonNull(gson.fromJson(jsonBaseStation, RachioApiBaseStation.class));
+    }
+
+    public Map<RachioId.BaseStation, RachioApiBaseStation> getBaseStations(RachioId.Person personId)
+            throws InterruptedException, TimeoutException, ExecutionException, RachioApiException,
+            RateLimitThrottleException {
+        String url = String.format(APIURL_GET_BASE_STATIONS, personId.id());
+        Request request = httpClient.newRequest(url).method(HttpMethod.GET);
+        ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
+
+        JsonElement jsonBaseStations = JsonParser.parseString(response.getContentAsString()).getAsJsonObject()
+                .get("baseStations");
+
+        return apiRequireNonNull(
+                gson.fromJson(jsonBaseStations, new TypeToken<Map<RachioId.BaseStation, RachioApiBaseStation>>() {
+                }.getType()));
+    }
+
+    public RachioApiValve getValve(RachioId.Valve valveId) throws InterruptedException, TimeoutException,
+            ExecutionException, RachioApiException, RateLimitThrottleException {
+        String url = String.format(APIURL_GET_VALVE, valveId.id());
+        Request request = httpClient.newRequest(url).method(HttpMethod.GET);
+        ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
+
+        JsonElement jsonValve = JsonParser.parseString(response.getContentAsString()).getAsJsonObject().get("valve");
+
+        return apiRequireNonNull(gson.fromJson(jsonValve, RachioApiValve.class));
+    }
+
+    public Map<RachioId.Valve, RachioApiValve> getValves(RachioId.BaseStation baseStationId)
+            throws InterruptedException, TimeoutException, ExecutionException, RachioApiException,
+            RateLimitThrottleException {
+        String url = String.format(APIURL_GET_VALVES, baseStationId.id());
+        Request request = httpClient.newRequest(url).method(HttpMethod.GET);
+        ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
+
+        JsonArray jsonValves = JsonParser.parseString(response.getContentAsString()).getAsJsonObject().get("valves")
+                .getAsJsonArray();
+
+        return apiRequireNonNull(gson.fromJson(jsonValves, new TypeToken<Map<RachioId.Valve, RachioApiValve>>() {
+        }.getType()));
+    }
+
+    public void putValveStartWatering(RachioId.Valve valveId, long durationSeconds) throws InterruptedException,
+            TimeoutException, ExecutionException, RachioApiException, RateLimitThrottleException {
+        JsonObject bodyParamJson = new JsonObject();
+        bodyParamJson.addProperty("valveId", valveId.id());
+        bodyParamJson.addProperty("durationSeconds", (int) durationSeconds);
+        Request request = httpClient.newRequest(APIURL_PUT_VALVE_START_WATERING).method(HttpMethod.PUT).content(
+                new StringContentProvider(CONTENT_TYPE_JSON, bodyParamJson.toString(), StandardCharsets.UTF_8));
+        sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
+    }
+
+    public void putValveStopWatering(RachioId.Valve valveId) throws InterruptedException, TimeoutException,
+            ExecutionException, RachioApiException, RateLimitThrottleException {
+        JsonObject bodyParamJson = new JsonObject();
+        bodyParamJson.addProperty("valveId", valveId.id());
+        Request request = httpClient.newRequest(APIURL_PUT_VALVE_STOP_WATERING).method(HttpMethod.PUT).content(
+                new StringContentProvider(CONTENT_TYPE_JSON, bodyParamJson.toString(), StandardCharsets.UTF_8));
+        sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
+    }
+
+    public void putValveDefaultRunTime(RachioId.Valve valveId, long durationSeconds) throws InterruptedException,
+            TimeoutException, ExecutionException, RachioApiException, RateLimitThrottleException {
+        JsonObject bodyParamJson = new JsonObject();
+        bodyParamJson.addProperty("valveId", valveId.id());
+        bodyParamJson.addProperty("defaultRuntimeSeconds", durationSeconds);
+        Request request = httpClient.newRequest(APIURL_PUT_VALVE_DEFAULT_RUNTIME).method(HttpMethod.PUT).content(
+                new StringContentProvider(CONTENT_TYPE_JSON, bodyParamJson.toString(), StandardCharsets.UTF_8));
+        sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
+    }
+
+    /*
+     * Utility functions
+     */
+
+    /**
+     * Given a string, return the MD5 hash of the String.
+     *
+     * @param unhashed The string contents to be hashed.
+     * @return MD5 Hashed value of the String. Null if there is a problem hashing the String.
+     */
+    private static String getMD5Hash(String unhashed) {
+        try {
+            byte[] bytesOfMessage = unhashed.getBytes(StandardCharsets.UTF_8);
+            MessageDigest md5 = MessageDigest.getInstance(MD5_HASH_ALGORITHM);
+            byte[] hash = md5.digest(bytesOfMessage);
+            StringBuilder sb = new StringBuilder(2 * hash.length);
+
+            for (byte b : hash) {
+                sb.append(String.format("%02x", b & 0xff));
+            }
+
+            String digest = sb.toString();
+
+            return digest;
+        } catch (RuntimeException | NoSuchAlgorithmException e) {
+            // logger.warn("Unexpected exception while generating MD5: {} ({})", e.getMessage(), e.getClass());
+            return "";
+        }
+    }
+
+    private void setHeaders(Request request) {
+        request.timeout(API_TIMEOUT, TimeUnit.SECONDS);
+        request.header(HttpHeader.AUTHORIZATION, "Bearer " + apiKey);
+        request.header(HttpHeader.ACCEPT, CONTENT_TYPE_JSON);
+    }
+
+    private ContentResponse sendRequest(Request request, ClientRateLimitManager.PRIORITY priority)
+            throws InterruptedException, TimeoutException, ExecutionException, RachioApiException,
+            RateLimitThrottleException {
+
+        rateLimitManager.tryThrottle(priority);
+
+        setHeaders(request);
+
+        logger.trace("REQUEST: {}", request.toString());
+        ContentResponse response = request.send();
+        logger.trace("RESPONSE: {}", response.getContentAsString());
+
+        HttpFields httpFields = response.getHeaders();
+        if (httpFields.containsKey(RACHIO_JSON_RATE_LIMIT)) {
+            int rateLimitCap = Integer.valueOf(httpFields.get(RACHIO_JSON_RATE_LIMIT));
+            int rateRemaining = Integer.valueOf(httpFields.get(RACHIO_JSON_RATE_REMAINING));
+            String rateResetString = httpFields.get(RACHIO_JSON_RATE_RESET); // new API adds [UTC] to this string
+            Instant rateReset = Instant.parse(rateResetString.substring(0, rateResetString.indexOf("Z") + 1));
+
+            rateLimitManager.updateRateLimit(rateLimitCap, rateRemaining, rateReset);
+        } else {
+            rateLimitManager.logRequest();
+        }
+
+        switch (response.getStatus()) {
+            case HttpStatus.OK_200:
+            case HttpStatus.NO_CONTENT_204:
+                break;
+            case HttpStatus.BAD_REQUEST_400: // API responses with 400 when user credentials are invalid
+                throw new RachioApiException("@text/api.bad-request", true);
+            case HttpStatus.UNAUTHORIZED_401:
+                throw new RachioApiException("@text/api.invalid-user-credentials", true);
+            case HttpStatus.TOO_MANY_REQUESTS_429:
+                throw new RachioApiException("@text/api.rate-limit-exceeded", false);
+            default:
+                throw new RachioApiException("Unexpected API error: " + response.getReason(), false);
+        }
+
+        return response;
+    }
+
+    private static <T> T apiRequireNonNull(@Nullable T obj) throws RachioApiException {
+        if (obj == null) {
+            throw new RachioApiException("@text/api.invalid-response", false);
+        } else {
+            return obj;
+        }
+    }
+}

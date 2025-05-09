@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<thing:thing-descriptions bindingId="rachio"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:thing="https://openhab.org/schemas/thing-description/v1.0.0"
+	xsi:schemaLocation="https://openhab.org/schemas/thing-description/v1.0.0 https://openhab.org/schemas/thing-description-1.0.0.xsd">
+
+	<thing-type id="valve">
+		<supported-bridge-type-refs>
+			<bridge-type-ref id="base-station"/>
+		</supported-bridge-type-refs>
+
+		<label>Rachio Sprinkler Smart Hose Valve</label>
+		<description>A Smart Hose Valve</description>
+		<semantic-equipment-tag>Valve</semantic-equipment-tag>
+
+		<channels>
+			<channel id="name" typeId="valve-name"/>
+			<channel id="run" typeId="valve-run"/>
+			<channel id="runTime" typeId="valve-runTime"/>
+			<channel id="runTotal" typeId="valve-runTotal"/>
+			<channel id="imageUrl" typeId="valve-imageUrl"/>
+			<channel id="image" typeId="valve-image"/>
+			<channel id="lowBattery" typeId="system.low-battery"/>
+			<channel id="defaultRunTime" typeId="valve-default-run-time"/>
+			<channel id="lastUpdate" typeId="valve-lastUpdate"/>
+			<channel id="lastWateredDate" typeId="valve-lastWateredDate"/>
+			<channel id="lastEvent" typeId="valve-lastEvent"/>
+			<channel id="lastEventTime" typeId="valve-lastEventTime"/>
+		</channels>
+
+		<representation-property>id</representation-property>
+
+		<config-description>
+			<parameter name="id" type="text">
+				<label>valve ID</label>
+				<description>ID of rachio valve</description>
+				<required>true</required>
+			</parameter>
+			<parameter name="defaultRunTime" type="integer" unit="min">
+				<label>Default Run Time</label>
+				<description>Default run time for valve. If blank, run time is inherited from controller</description>
+				<unitLabel>min</unitLabel>
+			</parameter>
+		</config-description>
+	</thing-type>
+
+	<channel-type id="valve-name">
+		<item-type>String</item-type>
+		<label>Name</label>
+		<description>Name of the valve as configured in the Rachip App</description>
+		<state readOnly="true" pattern="%s">
+		</state>
+	</channel-type>
+	<channel-type id="valve-number">
+		<item-type>Number</item-type>
+		<label>valve Number</label>
+		<description>valve Number (1-16)</description>
+		<state readOnly="true" pattern="%d"/>
+	</channel-type>
+	<channel-type id="valve-enabled">
+		<item-type>Switch</item-type>
+		<label>Enabled</label>
+		<description>ON: valve is enabled, OFF: zone is disabled</description>
+	</channel-type>
+	<channel-type id="valve-run">
+		<item-type>Switch</item-type>
+		<label>Run valve</label>
+		<description>ON: start watering, OFF: stop watering</description>
+	</channel-type>
+	<channel-type id="valve-runTime">
+		<item-type unitHint="min">Number:Time</item-type>
+		<label>Run Time</label>
+		<description>Set > 0 to start valve for given minutes</description>
+	</channel-type>
+	<channel-type id="valve-runTotal">
+		<item-type unitHint="min">Number:Time</item-type>
+		<label>Total Run Time</label>
+		<description>Total run time of the valve.</description>
+		<state readOnly="true"/>
+	</channel-type>
+	<channel-type id="valve-imageUrl">
+		<item-type>String</item-type>
+		<label>Image URL</label>
+		<description>URL for the valve picture/image.</description>
+		<state readOnly="true"/>
+	</channel-type>
+	<channel-type id="valve-image">
+		<item-type>Image</item-type>
+		<label>Image</label>
+		<description>valve picture/image.</description>
+		<state readOnly="true"></state>
+	</channel-type>
+	<channel-type id="valve-default-run-time">
+		<item-type unitHint="min">Number:Time</item-type>
+		<label>Default Runtime</label>
+		<description>Default run time for the valve</description>
+	</channel-type>
+	<channel-type id="valve-scheduleName">
+		<item-type>String</item-type>
+		<label>Schedule Name</label>
+		<description>Name of schedule.</description>
+	</channel-type>
+	<channel-type id="valve-scheduleInfo">
+		<item-type>String</item-type>
+		<label>Schedule Info</label>
+		<description>Brief description of schedule.</description>
+	</channel-type>
+	<channel-type id="valve-scheduleStart">
+		<item-type>DateTime</item-type>
+		<label>Schedule Start</label>
+		<description>Start of schedule.</description>
+	</channel-type>
+	<channel-type id="valve-scheduleEnd">
+		<item-type>DateTime</item-type>
+		<label>Schedule End</label>
+		<description>End of schedule.</description>
+	</channel-type>
+	<channel-type id="valve-lastWateredDate">
+		<item-type>DateTime</item-type>
+		<label>Last Watered Date</label>
+		<description>Last watered date/time</description>
+	</channel-type>
+	<channel-type id="valve-lastUpdate">
+		<item-type>DateTime</item-type>
+		<label>Last Update</label>
+		<description>Timestamp of last status update.</description>
+	</channel-type>
+	<channel-type id="valve-lastEvent">
+		<item-type>String</item-type>
+		<label>Last Event</label>
+		<description>Events can be received when callback is configured.</description>
+	</channel-type>
+	<channel-type id="valve-lastEventTime">
+		<item-type>DateTime</item-type>
+		<label>Last Event Time</label>
+		<description>Timestamp of last status update.</description>
+	</channel-type>
+</thing:thing-descriptions>

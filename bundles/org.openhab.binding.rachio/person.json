@@ -1,0 +1,1084 @@
+{
+    "createDate": 1464816747000,
+    "id": "06a1ccc1-de18-411a-9c8e-c7ae4295d96f",
+    "username": "jsjames",
+    "fullName": "Jeff James",
+    "email": "jeff@james-online.com",
+    "devices": [
+        {
+            "createDate": 1465070623000,
+            "id": "fc284477-53a1-4fa7-8afd-ed057a8ff2ea",
+            "status": "ONLINE",
+            "zones": [
+                {
+                    "id": "37aa5d84-27f5-4676-a6f4-79f93d7dcdd8",
+                    "zoneNumber": 15,
+                    "name": "North Hill",
+                    "enabled": true,
+                    "customNozzle": {
+                        "name": "DRIPLINE",
+                        "inchesPerHour": 0.5
+                    },
+                    "customSoil": {
+                        "name": "LOAMY_SAND"
+                    },
+                    "customSlope": {
+                        "name": "SEVEN_TWELVE",
+                        "sortOrder": 0
+                    },
+                    "customCrop": {
+                        "name": "Xeriscape",
+                        "coefficient": 0.3
+                    },
+                    "customShade": {
+                        "name": "SOME_SHADE"
+                    },
+                    "availableWater": 0.07,
+                    "rootZoneDepth": 6.65,
+                    "managementAllowedDepletion": 0.5,
+                    "efficiency": 0.9,
+                    "yardAreaSquareFeet": 2100,
+                    "imageUrl": "https://prod-media-photo.rach.io/25469dfa-ca24-4c18-9b9a-6115565583a9",
+                    "lastWateredDuration": 1792,
+                    "lastWateredDate": 1741081261000,
+                    "scheduleDataModified": false,
+                    "fixedRuntime": 0,
+                    "runtime": 1762,
+                    "depthOfWater": 0.23,
+                    "runtimeNoMultiplier": 1762,
+                    "maxRuntime": 10800,
+                    "wateringAdjustmentRuntimes": {
+                        "1": 2643,
+                        "2": 2202,
+                        "3": 1762,
+                        "4": 1321,
+                        "5": 881
+                    },
+                    "saturatedDepthOfWater": 0.25
+                },
+                {
+                    "id": "db534f93-8559-4970-9a83-f3726438e39a",
+                    "zoneNumber": 9,
+                    "name": "Fruit Trees",
+                    "enabled": true,
+                    "customNozzle": {
+                        "name": "BUBBLER",
+                        "inchesPerHour": 2.0
+                    },
+                    "customSoil": {
+                        "name": "SANDY_LOAM"
+                    },
+                    "customSlope": {
+                        "name": "ZERO_THREE",
+                        "sortOrder": 0
+                    },
+                    "customCrop": {
+                        "name": "Trees",
+                        "coefficient": 1.0
+                    },
+                    "customShade": {
+                        "name": "LOTS_OF_SUN"
+                    },
+                    "availableWater": 0.12,
+                    "rootZoneDepth": 30.0,
+                    "managementAllowedDepletion": 0.5,
+                    "efficiency": 1.0,
+                    "yardAreaSquareFeet": 70,
+                    "imageUrl": "https://prod-media-photo.rach.io/20df41bb-6daa-42bf-92a1-fd760a529308",
+                    "lastWateredDuration": 2700,
+                    "lastWateredDate": 1740301639000,
+                    "scheduleDataModified": false,
+                    "fixedRuntime": 0,
+                    "runtime": 3240,
+                    "depthOfWater": 1.8,
+                    "runtimeNoMultiplier": 3240,
+                    "maxRuntime": 36000,
+                    "wateringAdjustmentRuntimes": {
+                        "1": 4860,
+                        "2": 4050,
+                        "3": 3240,
+                        "4": 2430,
+                        "5": 1620
+                    },
+                    "saturatedDepthOfWater": 1.98
+                },
+                {
+                    "id": "4cbfa432-cf6a-4c6b-ba5e-99fdd46462be",
+                    "zoneNumber": 6,
+                    "name": "South West Xeriscape",
+                    "enabled": true,
+                    "customNozzle": {
+                        "name": "ROTARY_NOZZLE",
+                        "inchesPerHour": 2.41
+                    },
+                    "customSoil": {
+                        "name": "CLAY_LOAM"
+                    },
+                    "customSlope": {
+                        "name": "FOUR_SIX",
+                        "sortOrder": 0
+                    },
+                    "customCrop": {
+                        "name": "Xeriscape",
+                        "coefficient": 0.3
+                    },
+                    "customShade": {
+                        "name": "LOTS_OF_SUN"
+                    },
+                    "availableWater": 0.2,
+                    "rootZoneDepth": 5.0,
+                    "managementAllowedDepletion": 0.5,
+                    "efficiency": 0.8,
+                    "yardAreaSquareFeet": 559,
+                    "imageUrl": "https://prod-media-photo.rach.io/29b54ca5-5774-4122-9090-edc14c07dd3d",
+                    "lastWateredDuration": 307,
+                    "lastWateredDate": 1737515317000,
+                    "scheduleDataModified": false,
+                    "fixedRuntime": 0,
+                    "runtime": 849,
+                    "depthOfWater": 0.5,
+                    "runtimeNoMultiplier": 849,
+                    "maxRuntime": 10800,
+                    "wateringAdjustmentRuntimes": {
+                        "1": 1273,
+                        "2": 1061,
+                        "3": 849,
+                        "4": 637,
+                        "5": 424
+                    },
+                    "saturatedDepthOfWater": 0.55
+                },
+                {
+                    "id": "de45c524-2436-478e-8f4c-4e8418562b18",
+                    "zoneNumber": 14,
+                    "name": "Street Strip",
+                    "enabled": true,
+                    "customNozzle": {
+                        "name": "ROTARY_NOZZLE",
+                        "inchesPerHour": 0.7
+                    },
+                    "customSoil": {
+                        "name": "SANDY_LOAM"
+                    },
+                    "customSlope": {
+                        "name": "ZERO_THREE",
+                        "sortOrder": 0
+                    },
+                    "customCrop": {
+                        "name": "Xeriscape",
+                        "coefficient": 0.4091244339942932
+                    },
+                    "customShade": {
+                        "name": "SOME_SHADE"
+                    },
+                    "availableWater": 0.11999999731779099,
+                    "rootZoneDepth": 5.0,
+                    "managementAllowedDepletion": 0.5,
+                    "efficiency": 0.800000011920929,
+                    "yardAreaSquareFeet": 1039,
+                    "imageUrl": "https://prod-media-photo.rach.io/b5ede22f-3d8f-4f35-bda7-50538181c3dd",
+                    "lastWateredDuration": 1504,
+                    "lastWateredDate": 1740879901000,
+                    "scheduleDataModified": false,
+                    "fixedRuntime": 0,
+                    "runtime": 1753,
+                    "depthOfWater": 0.3,
+                    "runtimeNoMultiplier": 1753,
+                    "maxRuntime": 10800,
+                    "wateringAdjustmentRuntimes": {
+                        "1": 2630,
+                        "2": 2192,
+                        "3": 1753,
+                        "4": 1315,
+                        "5": 877
+                    },
+                    "saturatedDepthOfWater": 0.33
+                },
+                {
+                    "id": "ede1d4b5-56ff-4725-a01c-efc2057b57f8",
+                    "zoneNumber": 12,
+                    "name": "North Planters (Pool perimeter)",
+                    "enabled": true,
+                    "customNozzle": {
+                        "name": "FIXED_SPRAY_HEAD",
+                        "inchesPerHour": 1.76
+                    },
+                    "customSoil": {
+                        "name": "SANDY_LOAM"
+                    },
+                    "customSlope": {
+                        "name": "ZERO_THREE",
+                        "sortOrder": 0
+                    },
+                    "customCrop": {
+                        "name": "Shrubs",
+                        "coefficient": 0.8
+                    },
+                    "customShade": {
+                        "name": "SOME_SHADE"
+                    },
+                    "availableWater": 0.12,
+                    "rootZoneDepth": 20.01,
+                    "managementAllowedDepletion": 0.5,
+                    "efficiency": 0.8,
+                    "yardAreaSquareFeet": 500,
+                    "imageUrl": "https://prod-media-photo.rach.io/fe1280d9-708e-4dc3-ac0d-156f3898ed7a",
+                    "lastWateredDuration": 766,
+                    "lastWateredDate": 1741083070000,
+                    "scheduleDataModified": false,
+                    "fixedRuntime": 0,
+                    "runtime": 2789,
+                    "depthOfWater": 1.2,
+                    "runtimeNoMultiplier": 2789,
+                    "maxRuntime": 28800,
+                    "wateringAdjustmentRuntimes": {
+                        "1": 4184,
+                        "2": 3487,
+                        "3": 2789,
+                        "4": 2092,
+                        "5": 1395
+                    },
+                    "saturatedDepthOfWater": 1.32
+                },
+                {
+                    "id": "bba461db-e95f-40b4-a42b-852ea91e84a3",
+                    "zoneNumber": 13,
+                    "name": "North East Planters",
+                    "enabled": true,
+                    "customNozzle": {
+                        "name": "DRIPLINE",
+                        "inchesPerHour": 0.5
+                    },
+                    "customSoil": {
+                        "name": "LOAMY_SAND"
+                    },
+                    "customSlope": {
+                        "name": "OVER_TWELVE",
+                        "sortOrder": 0
+                    },
+                    "customCrop": {
+                        "name": "Shrubs",
+                        "coefficient": 0.758213222026825
+                    },
+                    "customShade": {
+                        "name": "SOME_SHADE"
+                    },
+                    "availableWater": 0.07,
+                    "rootZoneDepth": 15.0,
+                    "managementAllowedDepletion": 0.5,
+                    "efficiency": 0.9,
+                    "yardAreaSquareFeet": 254,
+                    "imageUrl": "https://prod-media-photo.rach.io/771fd5db-b302-40be-bf50-b2932ac02c8e",
+                    "lastWateredDuration": 356,
+                    "lastWateredDate": 1740988802000,
+                    "scheduleDataModified": false,
+                    "fixedRuntime": 0,
+                    "runtime": 4060,
+                    "depthOfWater": 0.53,
+                    "runtimeNoMultiplier": 4060,
+                    "maxRuntime": 28800,
+                    "wateringAdjustmentRuntimes": {
+                        "1": 6089,
+                        "2": 5074,
+                        "3": 4060,
+                        "4": 3045,
+                        "5": 2030
+                    },
+                    "saturatedDepthOfWater": 0.58
+                },
+                {
+                    "id": "bb7ebad6-5e2e-4a3c-94b7-fb52d755f01b",
+                    "zoneNumber": 2,
+                    "name": "South Planters",
+                    "enabled": true,
+                    "customNozzle": {
+                        "name": "FIXED_SPRAY_HEAD",
+                        "inchesPerHour": 1.5
+                    },
+                    "customSoil": {
+                        "name": "LOAMY_SAND"
+                    },
+                    "customSlope": {
+                        "name": "ZERO_THREE",
+                        "sortOrder": 0
+                    },
+                    "customCrop": {
+                        "name": "Shrubs",
+                        "coefficient": 0.5
+                    },
+                    "customShade": {
+                        "name": "LOTS_OF_SUN"
+                    },
+                    "availableWater": 0.07,
+                    "rootZoneDepth": 15.0,
+                    "managementAllowedDepletion": 0.5,
+                    "efficiency": 0.8,
+                    "yardAreaSquareFeet": 426,
+                    "imageUrl": "https://prod-media-photo.rach.io/7bbf0394-2759-4248-b2f2-b90ca521292a",
+                    "lastWateredDuration": 723,
+                    "lastWateredDate": 1740796017000,
+                    "scheduleDataModified": false,
+                    "fixedRuntime": 0,
+                    "runtime": 1445,
+                    "depthOfWater": 0.53,
+                    "runtimeNoMultiplier": 1445,
+                    "maxRuntime": 28800,
+                    "wateringAdjustmentRuntimes": {
+                        "1": 2168,
+                        "2": 1807,
+                        "3": 1445,
+                        "4": 1084,
+                        "5": 723
+                    },
+                    "saturatedDepthOfWater": 0.58
+                },
+                {
+                    "id": "3a4c3549-1184-4cfe-a5d3-6f1518bfbd21",
+                    "zoneNumber": 11,
+                    "name": "Citris",
+                    "enabled": true,
+                    "customNozzle": {
+                        "name": "BUBBLER",
+                        "inchesPerHour": 2.0
+                    },
+                    "customSoil": {
+                        "name": "SANDY_LOAM"
+                    },
+                    "customSlope": {
+                        "name": "ZERO_THREE",
+                        "sortOrder": 0
+                    },
+                    "customCrop": {
+                        "name": "Warm Season Grass",
+                        "coefficient": 0.9011515974998474
+                    },
+                    "customShade": {
+                        "name": "LOTS_OF_SUN"
+                    },
+                    "availableWater": 0.11999999731779099,
+                    "rootZoneDepth": 9.0,
+                    "managementAllowedDepletion": 0.5,
+                    "efficiency": 1.0,
+                    "yardAreaSquareFeet": 469,
+                    "imageUrl": "https://prod-media-photo.rach.io/daf89bd1-0744-4603-a5b4-32218fceaae6",
+                    "lastWateredDuration": 1296,
+                    "lastWateredDate": 1741079239000,
+                    "scheduleDataModified": false,
+                    "fixedRuntime": 0,
+                    "runtime": 972,
+                    "depthOfWater": 0.54,
+                    "runtimeNoMultiplier": 972,
+                    "maxRuntime": 10800,
+                    "wateringAdjustmentRuntimes": {
+                        "1": 1458,
+                        "2": 1215,
+                        "3": 972,
+                        "4": 729,
+                        "5": 486
+                    },
+                    "saturatedDepthOfWater": 0.59
+                },
+                {
+                    "id": "f6f4f5b5-7dbf-4307-94af-f4a1341042d7",
+                    "zoneNumber": 1,
+                    "name": "Vineyard",
+                    "enabled": true,
+                    "customNozzle": {
+                        "name": "EMITTER",
+                        "inchesPerHour": 3.0
+                    },
+                    "customSoil": {
+                        "name": "LOAMY_SAND"
+                    },
+                    "customSlope": {
+                        "name": "ZERO_THREE",
+                        "sortOrder": 0
+                    },
+                    "customCrop": {
+                        "name": "Xeriscape",
+                        "coefficient": 0.6888712644577026
+                    },
+                    "customShade": {
+                        "name": "LOTS_OF_SUN"
+                    },
+                    "availableWater": 0.07000000029802322,
+                    "rootZoneDepth": 12.2,
+                    "managementAllowedDepletion": 0.6037008762359619,
+                    "efficiency": 0.8999999761581421,
+                    "yardAreaSquareFeet": 60,
+                    "imageUrl": "https://prod-media-photo.rach.io/deb757b6-4090-4229-bd8b-f6d85f665524",
+                    "lastWateredDuration": 1590,
+                    "lastWateredDate": 1741225108000,
+                    "scheduleDataModified": false,
+                    "fixedRuntime": 0,
+                    "runtime": 664,
+                    "depthOfWater": 0.52,
+                    "runtimeNoMultiplier": 664,
+                    "maxRuntime": 10800,
+                    "wateringAdjustmentRuntimes": {
+                        "1": 996,
+                        "2": 830,
+                        "3": 664,
+                        "4": 498,
+                        "5": 332
+                    },
+                    "saturatedDepthOfWater": 0.57
+                },
+                {
+                    "id": "5fe7da59-9449-4ccd-acf2-d5db0f8f2375",
+                    "zoneNumber": 4,
+                    "name": "Hanging Plants",
+                    "enabled": false,
+                    "customNozzle": {
+                        "name": "MISTER",
+                        "inchesPerHour": 2.0
+                    },
+                    "customSoil": {
+                        "name": "LOAM"
+                    },
+                    "customSlope": {
+                        "name": "ZERO_THREE",
+                        "sortOrder": 0
+                    },
+                    "customCrop": {
+                        "name": "Annual",
+                        "coefficient": 0.8
+                    },
+                    "customShade": {
+                        "name": "LOTS_OF_SUN"
+                    },
+                    "availableWater": 0.17,
+                    "rootZoneDepth": 4.0,
+                    "managementAllowedDepletion": 0.5,
+                    "efficiency": 0.9,
+                    "yardAreaSquareFeet": 219,
+                    "imageUrl": "https://prod-media-photo.rach.io/40bfe547-8fc2-4562-b8a0-04421b8fa6f1",
+                    "lastWateredDuration": 79,
+                    "lastWateredDate": 1701550802000,
+                    "scheduleDataModified": false,
+                    "fixedRuntime": 0,
+                    "runtime": 651,
+                    "depthOfWater": 0.34,
+                    "runtimeNoMultiplier": 651,
+                    "maxRuntime": 10800,
+                    "wateringAdjustmentRuntimes": {
+                        "1": 977,
+                        "2": 814,
+                        "3": 651,
+                        "4": 488,
+                        "5": 326
+                    },
+                    "saturatedDepthOfWater": 0.37
+                },
+                {
+                    "id": "3440f54d-8380-422e-a340-61f5d3ec35dd",
+                    "zoneNumber": 10,
+                    "name": "North Turf",
+                    "enabled": true,
+                    "customNozzle": {
+                        "name": "FIXED_SPRAY_HEAD",
+                        "inchesPerHour": 0.5
+                    },
+                    "customSoil": {
+                        "name": "SANDY_LOAM"
+                    },
+                    "customSlope": {
+                        "name": "ZERO_THREE",
+                        "sortOrder": 0
+                    },
+                    "customCrop": {
+                        "name": "Cool Season Grass",
+                        "coefficient": 1.0034548044204712
+                    },
+                    "customShade": {
+                        "name": "LOTS_OF_SUN"
+                    },
+                    "availableWater": 0.11999999731779099,
+                    "rootZoneDepth": 4.0,
+                    "managementAllowedDepletion": 0.699999988079071,
+                    "efficiency": 0.800000011920929,
+                    "yardAreaSquareFeet": 400,
+                    "imageUrl": "https://prod-media-photo.rach.io/3886bc78-2fec-408c-a7fd-de50ad654d3c",
+                    "lastWateredDuration": 351,
+                    "lastWateredDate": 1741611602000,
+                    "scheduleDataModified": false,
+                    "fixedRuntime": 0,
+                    "runtime": 2782,
+                    "depthOfWater": 0.34,
+                    "runtimeNoMultiplier": 2782,
+                    "maxRuntime": 10800,
+                    "wateringAdjustmentRuntimes": {
+                        "1": 4173,
+                        "2": 3477,
+                        "3": 2782,
+                        "4": 2086,
+                        "5": 1391
+                    },
+                    "saturatedDepthOfWater": 0.37
+                },
+                {
+                    "id": "f139c2af-e327-499d-ab70-2fa7fab94f02",
+                    "zoneNumber": 7,
+                    "name": "East Planter",
+                    "enabled": true,
+                    "customNozzle": {
+                        "name": "DRIPLINE",
+                        "inchesPerHour": 0.5
+                    },
+                    "customSoil": {
+                        "name": "LOAMY_SAND"
+                    },
+                    "customSlope": {
+                        "name": "ZERO_THREE",
+                        "sortOrder": 0
+                    },
+                    "customCrop": {
+                        "name": "Shrubs",
+                        "coefficient": 0.8050863742828369
+                    },
+                    "customShade": {
+                        "name": "LOTS_OF_SUN"
+                    },
+                    "availableWater": 0.07000000029802322,
+                    "rootZoneDepth": 13.06,
+                    "managementAllowedDepletion": 0.5,
+                    "efficiency": 0.8999999761581421,
+                    "yardAreaSquareFeet": 227,
+                    "imageUrl": "https://prod-media-photo.rach.io/40e7f7be-3cf2-42ad-9d54-54305d92d991",
+                    "lastWateredDuration": 1985,
+                    "lastWateredDate": 1740733640000,
+                    "scheduleDataModified": false,
+                    "fixedRuntime": 0,
+                    "runtime": 3523,
+                    "depthOfWater": 0.46,
+                    "runtimeNoMultiplier": 3523,
+                    "maxRuntime": 28800,
+                    "wateringAdjustmentRuntimes": {
+                        "1": 5285,
+                        "2": 4404,
+                        "3": 3523,
+                        "4": 2643,
+                        "5": 1762
+                    },
+                    "saturatedDepthOfWater": 0.51
+                },
+                {
+                    "id": "e926245a-b9c8-40c1-a075-d138e5e511e9",
+                    "zoneNumber": 8,
+                    "name": "South East Planter",
+                    "enabled": true,
+                    "customNozzle": {
+                        "name": "ROTARY_NOZZLE",
+                        "inchesPerHour": 0.7
+                    },
+                    "customSoil": {
+                        "name": "SANDY_LOAM"
+                    },
+                    "customSlope": {
+                        "name": "ZERO_THREE",
+                        "sortOrder": 0
+                    },
+                    "customCrop": {
+                        "name": "Perennial",
+                        "coefficient": 0.55
+                    },
+                    "customShade": {
+                        "name": "SOME_SHADE"
+                    },
+                    "availableWater": 0.12,
+                    "rootZoneDepth": 10.0,
+                    "managementAllowedDepletion": 0.5,
+                    "efficiency": 0.8,
+                    "yardAreaSquareFeet": 498,
+                    "imageUrl": "https://prod-media-photo.rach.io/2a6f9318-b8c6-4500-bd7a-0c703b92e441",
+                    "lastWateredDuration": 4,
+                    "lastWateredDate": 1741194687000,
+                    "scheduleDataModified": false,
+                    "fixedRuntime": 0,
+                    "runtime": 3506,
+                    "depthOfWater": 0.6,
+                    "runtimeNoMultiplier": 3506,
+                    "maxRuntime": 18000,
+                    "wateringAdjustmentRuntimes": {
+                        "1": 5260,
+                        "2": 4383,
+                        "3": 3506,
+                        "4": 2630,
+                        "5": 1753
+                    },
+                    "saturatedDepthOfWater": 0.66
+                },
+                {
+                    "id": "8cda335e-c81c-4fd7-a97d-3870e89261e0",
+                    "zoneNumber": 16,
+                    "name": "Zone 16",
+                    "enabled": false,
+                    "customNozzle": {
+                        "name": "FIXED_SPRAY_HEAD",
+                        "inchesPerHour": 1.5
+                    },
+                    "customSoil": {
+                        "name": "LOAM"
+                    },
+                    "customSlope": {
+                        "name": "ZERO_THREE",
+                        "sortOrder": 0
+                    },
+                    "customCrop": {
+                        "name": "Cool Season Grass",
+                        "coefficient": 0.7
+                    },
+                    "customShade": {
+                        "name": "LOTS_OF_SUN"
+                    },
+                    "availableWater": 0.17,
+                    "rootZoneDepth": 6.0,
+                    "managementAllowedDepletion": 0.5,
+                    "efficiency": 0.8,
+                    "yardAreaSquareFeet": 1000,
+                    "imageUrl": "https://prod-media-photo.rach.io/8107d244-1176-44a4-9a7e-d1de3b803f82",
+                    "scheduleDataModified": false,
+                    "fixedRuntime": 0,
+                    "runtime": 1391,
+                    "depthOfWater": 0.51,
+                    "runtimeNoMultiplier": 1391,
+                    "maxRuntime": 10800,
+                    "wateringAdjustmentRuntimes": {
+                        "1": 2086,
+                        "2": 1739,
+                        "3": 1391,
+                        "4": 1043,
+                        "5": 695
+                    },
+                    "saturatedDepthOfWater": 0.56
+                },
+                {
+                    "id": "a868976b-2ff4-4c97-8bfd-7f8f5bf7d94c",
+                    "zoneNumber": 3,
+                    "name": "West/North Planters",
+                    "enabled": true,
+                    "customNozzle": {
+                        "name": "FIXED_SPRAY_HEAD",
+                        "inchesPerHour": 0.88
+                    },
+                    "customSoil": {
+                        "name": "LOAMY_SAND"
+                    },
+                    "customSlope": {
+                        "name": "ZERO_THREE",
+                        "sortOrder": 0
+                    },
+                    "customCrop": {
+                        "name": "Xeriscape",
+                        "coefficient": 0.9
+                    },
+                    "customShade": {
+                        "name": "SOME_SHADE"
+                    },
+                    "availableWater": 0.07,
+                    "rootZoneDepth": 24.0,
+                    "managementAllowedDepletion": 0.5,
+                    "efficiency": 1.0,
+                    "yardAreaSquareFeet": 717,
+                    "imageUrl": "https://prod-media-photo.rach.io/44ed86af-3041-48fa-8edd-19b4dca733c9",
+                    "lastWateredDuration": 1516,
+                    "lastWateredDate": 1740474439000,
+                    "scheduleDataModified": false,
+                    "fixedRuntime": 0,
+                    "runtime": 3436,
+                    "depthOfWater": 0.84,
+                    "runtimeNoMultiplier": 3436,
+                    "maxRuntime": 10800,
+                    "wateringAdjustmentRuntimes": {
+                        "1": 5155,
+                        "2": 4295,
+                        "3": 3436,
+                        "4": 2577,
+                        "5": 1718
+                    },
+                    "saturatedDepthOfWater": 0.92
+                },
+                {
+                    "id": "ebef504f-0640-46ad-8b6d-2de376324bd2",
+                    "zoneNumber": 5,
+                    "name": "South East Turf",
+                    "enabled": false,
+                    "customNozzle": {
+                        "name": "FIXED_SPRAY_HEAD",
+                        "inchesPerHour": 1.5
+                    },
+                    "customSoil": {
+                        "name": "CLAY_LOAM"
+                    },
+                    "customSlope": {
+                        "name": "ZERO_THREE",
+                        "sortOrder": 0
+                    },
+                    "customCrop": {
+                        "name": "Cool Season Grass",
+                        "coefficient": 0.7
+                    },
+                    "customShade": {
+                        "name": "LOTS_OF_SHADE"
+                    },
+                    "availableWater": 0.2,
+                    "rootZoneDepth": 6.0,
+                    "managementAllowedDepletion": 0.5,
+                    "efficiency": 0.8,
+                    "yardAreaSquareFeet": 1000,
+                    "imageUrl": "https://prod-media-photo.rach.io/2765557a-02b2-4dfe-84e6-7cbcf9056ff8",
+                    "lastWateredDuration": 49,
+                    "lastWateredDate": 1536624677000,
+                    "scheduleDataModified": false,
+                    "fixedRuntime": 0,
+                    "runtime": 1636,
+                    "depthOfWater": 0.6,
+                    "runtimeNoMultiplier": 1636,
+                    "maxRuntime": 10800,
+                    "wateringAdjustmentRuntimes": {
+                        "1": 2455,
+                        "2": 2045,
+                        "3": 1636,
+                        "4": 1227,
+                        "5": 818
+                    },
+                    "saturatedDepthOfWater": 0.66
+                }
+            ],
+            "timeZone": "America/Los_Angeles",
+            "latitude": 33.0675858,
+            "longitude": -117.0793623,
+            "name": "Rachio-E0ACCA",
+            "scheduleRules": [
+                {
+                    "id": "af31b76a-f1f5-4861-8840-f4871cffae30",
+                    "zones": [
+                        {
+                            "zoneId": "3440f54d-8380-422e-a340-61f5d3ec35dd",
+                            "duration": 240,
+                            "sortOrder": 1
+                        }
+                    ],
+                    "scheduleJobTypes": [
+                        "INTERVAL_1"
+                    ],
+                    "startHour": 11,
+                    "startMinute": 0,
+                    "operator": "AFTER",
+                    "summary": "Every day at 11:00 AM",
+                    "cycleSoakStatus": "OFF",
+                    "startDate": 1587538800000,
+                    "name": "Sod Schedule 11:00",
+                    "enabled": false,
+                    "startDay": 22,
+                    "startMonth": 4,
+                    "startYear": 2020,
+                    "totalDuration": 240,
+                    "etSkip": false,
+                    "externalName": "Sod Schedule 11:00",
+                    "cycleSoak": false
+                },
+                {
+                    "id": "0f3fd338-8f4a-442d-bbb4-be89f78788af",
+                    "zones": [
+                        {
+                            "zoneId": "e926245a-b9c8-40c1-a075-d138e5e511e9",
+                            "duration": 420,
+                            "sortOrder": 1
+                        }
+                    ],
+                    "scheduleJobTypes": [
+                        "INTERVAL_1"
+                    ],
+                    "operator": "AFTER",
+                    "summary": "Every day end by sunrise",
+                    "cycleSoakStatus": "OFF",
+                    "startDate": 1669708800000,
+                    "name": "Temp",
+                    "enabled": false,
+                    "startDay": 29,
+                    "startMonth": 11,
+                    "startYear": 2022,
+                    "totalDuration": 420,
+                    "etSkip": false,
+                    "externalName": "Temp",
+                    "cycleSoak": false
+                },
+                {
+                    "id": "caee4524-15d8-491d-9ae1-2e4fed6eda22",
+                    "zones": [
+                        {
+                            "zoneId": "3440f54d-8380-422e-a340-61f5d3ec35dd",
+                            "duration": 300,
+                            "sortOrder": 0
+                        }
+                    ],
+                    "scheduleJobTypes": [
+                        "INTERVAL_1"
+                    ],
+                    "startHour": 17,
+                    "startMinute": 0,
+                    "operator": "AFTER",
+                    "summary": "Every day at 5:00 PM",
+                    "cycleSoakStatus": "OFF",
+                    "startDate": 1587538800000,
+                    "name": "Sod Schedule 5:00",
+                    "enabled": false,
+                    "startDay": 22,
+                    "startMonth": 4,
+                    "startYear": 2020,
+                    "totalDuration": 300,
+                    "etSkip": false,
+                    "externalName": "Sod Schedule 5:00",
+                    "cycleSoak": false
+                },
+                {
+                    "id": "f588ca14-63a5-4b5b-b708-228005e4ca4e",
+                    "zones": [
+                        {
+                            "zoneId": "3440f54d-8380-422e-a340-61f5d3ec35dd",
+                            "duration": 900,
+                            "sortOrder": 1
+                        }
+                    ],
+                    "scheduleJobTypes": [
+                        "INTERVAL_1"
+                    ],
+                    "startHour": 14,
+                    "startMinute": 0,
+                    "operator": "AFTER",
+                    "summary": "Every day at 2:00 PM",
+                    "cycleSoakStatus": "OFF",
+                    "startDate": 1587538800000,
+                    "name": "Sod Schedule 2:00",
+                    "enabled": false,
+                    "startDay": 22,
+                    "startMonth": 4,
+                    "startYear": 2020,
+                    "totalDuration": 900,
+                    "etSkip": true,
+                    "externalName": "Sod Schedule 2:00",
+                    "cycleSoak": false
+                },
+                {
+                    "id": "716f1027-1f6e-4699-937d-81f0fa119639",
+                    "zones": [
+                        {
+                            "zoneId": "5fe7da59-9449-4ccd-acf2-d5db0f8f2375",
+                            "duration": 120,
+                            "sortOrder": 1
+                        }
+                    ],
+                    "scheduleJobTypes": [
+                        "INTERVAL_2"
+                    ],
+                    "startHour": 13,
+                    "startMinute": 0,
+                    "operator": "AFTER",
+                    "summary": "Every 2 days at 1:00 PM",
+                    "cycleSoakStatus": "OFF",
+                    "startDate": 1625382000000,
+                    "name": "Hanging Plants 2",
+                    "enabled": true,
+                    "startDay": 4,
+                    "startMonth": 7,
+                    "startYear": 2021,
+                    "totalDuration": 120,
+                    "etSkip": false,
+                    "externalName": "Hanging Plants 2",
+                    "cycleSoak": false
+                },
+                {
+                    "id": "22491bc0-0d6e-4527-9d05-8595991e279a",
+                    "zones": [
+                        {
+                            "zoneId": "f6f4f5b5-7dbf-4307-94af-f4a1341042d7",
+                            "duration": 1878,
+                            "sortOrder": 1
+                        }
+                    ],
+                    "scheduleJobTypes": [
+                        "INTERVAL_7"
+                    ],
+                    "operator": "AFTER",
+                    "summary": "Every 7 days at sunset",
+                    "cycleSoakStatus": "ON",
+                    "startDate": 1659769200000,
+                    "name": "Vineyard",
+                    "enabled": true,
+                    "startDay": 6,
+                    "startMonth": 8,
+                    "startYear": 2022,
+                    "totalDuration": 1878,
+                    "etSkip": true,
+                    "externalName": "Vineyard",
+                    "cycleSoak": true
+                },
+                {
+                    "id": "a42193e6-554f-4587-bea3-c365b96e55ec",
+                    "zones": [
+                        {
+                            "zoneId": "bba461db-e95f-40b4-a42b-852ea91e84a3",
+                            "duration": 355,
+                            "sortOrder": 1
+                        }
+                    ],
+                    "scheduleJobTypes": [
+                        "INTERVAL_3"
+                    ],
+                    "startHour": 0,
+                    "startMinute": 0,
+                    "operator": "AFTER",
+                    "summary": "Every 3 days at 12:00 AM",
+                    "cycleSoakStatus": "ON",
+                    "startDate": 1560582000000,
+                    "name": "North East Planter",
+                    "enabled": true,
+                    "startDay": 15,
+                    "startMonth": 6,
+                    "startYear": 2019,
+                    "totalDuration": 355,
+                    "etSkip": true,
+                    "externalName": "North East Planter",
+                    "cycleSoak": true
+                },
+                {
+                    "id": "0d49f5a1-cd7c-4b7c-8a71-0359e5817c95",
+                    "zones": [
+                        {
+                            "zoneId": "3440f54d-8380-422e-a340-61f5d3ec35dd",
+                            "duration": 346,
+                            "sortOrder": 1
+                        }
+                    ],
+                    "scheduleJobTypes": [
+                        "INTERVAL_1"
+                    ],
+                    "startHour": 6,
+                    "startMinute": 0,
+                    "operator": "AFTER",
+                    "summary": "Every day at 6:00 AM",
+                    "cycleSoakStatus": "OFF",
+                    "startDate": 1663657200000,
+                    "name": "Sod Schedule morning",
+                    "enabled": true,
+                    "startDay": 20,
+                    "startMonth": 9,
+                    "startYear": 2022,
+                    "totalDuration": 346,
+                    "etSkip": true,
+                    "externalName": "Sod Schedule morning",
+                    "cycleSoak": false
+                }
+            ],
+            "serialNumber": "CR0518372",
+            "rainDelayExpirationDate": 1741294566000,
+            "macAddress": "80A589E0ACCA",
+            "on": true,
+            "flexScheduleRules": [
+                {
+                    "id": "e5b9e57a-53e5-4acb-9ab6-87bf2a180709",
+                    "zones": [
+                        {
+                            "zoneId": "3440f54d-8380-422e-a340-61f5d3ec35dd",
+                            "sortOrder": 4,
+                            "duration": 3199
+                        },
+                        {
+                            "zoneId": "37aa5d84-27f5-4676-a6f4-79f93d7dcdd8",
+                            "sortOrder": 7,
+                            "duration": 1782
+                        },
+                        {
+                            "zoneId": "3a4c3549-1184-4cfe-a5d3-6f1518bfbd21",
+                            "sortOrder": 5,
+                            "duration": 1296
+                        },
+                        {
+                            "zoneId": "a868976b-2ff4-4c97-8bfd-7f8f5bf7d94c",
+                            "sortOrder": 1,
+                            "duration": 1517
+                        },
+                        {
+                            "zoneId": "f139c2af-e327-499d-ab70-2fa7fab94f02",
+                            "sortOrder": 2,
+                            "duration": 1979
+                        },
+                        {
+                            "zoneId": "db534f93-8559-4970-9a83-f3726438e39a",
+                            "sortOrder": 3,
+                            "duration": 2700
+                        },
+                        {
+                            "zoneId": "ede1d4b5-56ff-4725-a01c-efc2057b57f8",
+                            "sortOrder": 6,
+                            "duration": 1471
+                        }
+                    ],
+                    "scheduleJobTypes": [
+                        "ANY"
+                    ],
+                    "operator": "AFTER",
+                    "summary": "As needed end by 5:00 AM",
+                    "cycleSoak": false,
+                    "startDate": 1555225200000,
+                    "name": "Back As Needed",
+                    "enabled": true,
+                    "startDay": 14,
+                    "startMonth": 4,
+                    "startYear": 2019,
+                    "totalDuration": 13944,
+                    "type": "FLEX",
+                    "externalName": "Back As Needed"
+                },
+                {
+                    "id": "e6382cf8-62dc-44f9-be27-b2642088d6aa",
+                    "zones": [
+                        {
+                            "zoneId": "4cbfa432-cf6a-4c6b-ba5e-99fdd46462be",
+                            "sortOrder": 3,
+                            "duration": 849
+                        },
+                        {
+                            "zoneId": "bb7ebad6-5e2e-4a3c-94b7-fb52d755f01b",
+                            "sortOrder": 2,
+                            "duration": 1432
+                        },
+                        {
+                            "zoneId": "e926245a-b9c8-40c1-a075-d138e5e511e9",
+                            "sortOrder": 1,
+                            "duration": 1800
+                        },
+                        {
+                            "zoneId": "de45c524-2436-478e-8f4c-4e8418562b18",
+                            "sortOrder": 4,
+                            "duration": 1500
+                        }
+                    ],
+                    "scheduleJobTypes": [
+                        "ANY"
+                    ],
+                    "operator": "AFTER",
+                    "summary": "As needed at sunset",
+                    "cycleSoak": false,
+                    "startDate": 1555225200000,
+                    "name": "Front As Needed",
+                    "enabled": true,
+                    "startDay": 14,
+                    "startMonth": 4,
+                    "startYear": 2019,
+                    "totalDuration": 5581,
+                    "type": "FLEX",
+                    "externalName": "Front As Needed"
+                }
+            ],
+            "model": "GENERATION2_16ZONE",
+            "scheduleModeType": "MANUAL",
+            "deleted": false,
+            "rainSensorTripped": false,
+            "utcOffset": -25200000,
+            "homeKitCompatible": false
+        }
+    ],
+    "deleted": false
+}

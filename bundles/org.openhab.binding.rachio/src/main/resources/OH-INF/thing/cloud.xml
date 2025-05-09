@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<thing:thing-descriptions bindingId="rachio"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:thing="https://openhab.org/schemas/thing-description/v1.0.0"
+	xsi:schemaLocation="https://openhab.org/schemas/thing-description/v1.0.0 https://openhab.org/schemas/thing-description-1.0.0.xsd">
+
+	<bridge-type id="cloud">
+		<label>Rachio Cloud Connector</label>
+		<description>Rachio Sprinkler Controller.</description>
+		<semantic-equipment-tag>WebService</semantic-equipment-tag>
+
+		<properties>
+			<property name="vendor">Rachio</property>
+		</properties>
+
+		<config-description>
+			<parameter name="apikey" type="text">
+				<label>Rachio apikey</label>
+				<description>Visit Rachio Cloud Portal to create an apikey</description>
+				<required>false</required>
+			</parameter>
+			<parameter name="pollingInterval" type="integer" min="30" step="30">
+				<label>Polling/Refresh Interval</label>
+				<description>Seconds between fetching values from the cloud service</description>
+				<unitLabel>s</unitLabel>
+				<required>false</required>
+				<default>120</default>
+			</parameter>
+			<parameter name="callbackUrl" type="text">
+				<label>Callback URL</label>
+				<description>https://username:password@home.myopenhab.org/rachio/webhook using the username and password for your
+					myopenhab.org account.</description>
+				<required>false</required>
+			</parameter>
+			<parameter name="clearAllCallbacks" type="boolean">
+				<label>Clear Callbacks</label>
+				<description>If true all callbacks will be cleared on registrations.</description>
+				<required>false</required>
+				<default>false</default>
+			</parameter>
+		</config-description>
+	</bridge-type>
+</thing:thing-descriptions>

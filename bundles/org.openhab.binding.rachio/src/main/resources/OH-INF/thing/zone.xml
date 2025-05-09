@@ -1,0 +1,169 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<thing:thing-descriptions bindingId="rachio"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:thing="https://openhab.org/schemas/thing-description/v1.0.0"
+	xsi:schemaLocation="https://openhab.org/schemas/thing-description/v1.0.0 https://openhab.org/schemas/thing-description-1.0.0.xsd">
+
+	<thing-type id="zone">
+		<supported-bridge-type-refs>
+			<bridge-type-ref id="controller"/>
+		</supported-bridge-type-refs>
+
+		<label>Rachio Sprinkler Zone</label>
+		<description>A zone of a Rachio Sprinkler Controller</description>
+		<semantic-equipment-tag>Zone</semantic-equipment-tag>
+
+		<channels>
+			<channel id="name" typeId="zone-name"/>
+			<channel id="number" typeId="zone-number"/>
+			<channel id="enabled" typeId="zone-enabled"/>
+			<channel id="run" typeId="zone-run"/>
+			<channel id="runTime" typeId="zone-runTime"/>
+			<channel id="runTotal" typeId="zone-runTotal"/>
+			<channel id="imageUrl" typeId="zone-imageUrl"/>
+			<channel id="image" typeId="zone-image"/>
+			<channel id="lastUpdate" typeId="zone-lastUpdate"/>
+			<channel id="lastWateredDate" typeId="zone-lastWateredDate"/>
+			<channel id="lastEvent" typeId="zone-lastEvent"/>
+			<channel id="lastEventTime" typeId="zone-lastEventTime"/>
+			<channel id="availableWater" typeId="zone-availableWater"/>
+			<channel id="depthOfWater" typeId="zone-depthOfWater"/>
+			<channel id="depletionLevel" typeId="zone-depletionLevel"/>
+			<channel id="saturationDepth" typeId="zone-saturationDepth"/>
+		</channels>
+
+		<representation-property>id</representation-property>
+
+		<config-description>
+			<parameter name="id" type="text">
+				<label>Zone ID</label>
+				<description>ID of rachio zone</description>
+				<required>true</required>
+			</parameter>
+			<parameter name="defaultRunTime" type="integer" unit="min">
+				<label>Default Run Time</label>
+				<description>Default run time for zone. If blank, run time is inherited from controller</description>
+				<unitLabel>min</unitLabel>
+			</parameter>
+		</config-description>
+	</thing-type>
+
+	<channel-type id="zone-name">
+		<item-type>String</item-type>
+		<label>Name</label>
+		<description>Name of the zone as configured in the Rachip App</description>
+		<tags>
+			<tag>Status</tag>
+			<tag>Info</tag>
+		</tags>
+		<state readOnly="true" pattern="%s">
+		</state>
+	</channel-type>
+	<channel-type id="zone-number">
+		<item-type>Number</item-type>
+		<label>Zone Number</label>
+		<description>Zone Number (1-16)</description>
+		<tags>
+			<tag>Status</tag>
+			<tag>Info</tag>
+		</tags>
+		<state readOnly="true" pattern="%d"/>
+	</channel-type>
+	<channel-type id="zone-enabled">
+		<item-type>Switch</item-type>
+		<label>Enabled</label>
+		<description>ON: Zone is enabled, OFF: zone is disabled</description>
+	</channel-type>
+	<channel-type id="zone-run">
+		<item-type>Switch</item-type>
+		<label>Run Zone</label>
+		<description>ON: start watering, OFF: stop watering</description>
+	</channel-type>
+	<channel-type id="zone-runTime">
+		<item-type unitHint="min">Number:Time</item-type>
+		<label>Run Time</label>
+		<description>Set > 0 to start zone for given minutes</description>
+	</channel-type>
+	<channel-type id="zone-availableWater">
+		<item-type unitHint="in">Number:Length</item-type>
+		<label>Available Water</label>
+		<description>Available water for the zone.</description>
+		<state readOnly="true"/>
+	</channel-type>
+	<channel-type id="zone-depthOfWater">
+		<item-type unitHint="in">Number:Length</item-type>
+		<label>Depth of Water</label>
+		<description>Depth of water for the zone.</description>
+		<state readOnly="true"/>
+	</channel-type>
+	<channel-type id="zone-depletionLevel">
+		<item-type unitHint="in">Number:Length</item-type>
+		<label>Water Depletion Level</label>
+		<description>Allow depletion level of water for the zone.</description>
+		<state readOnly="true"/>
+	</channel-type>
+	<channel-type id="zone-saturationDepth">
+		<item-type unitHint="in">Number:Length</item-type>
+		<label>Saturation Depth Level</label>
+		<description>Saturation depth of water for the zone.</description>
+		<state readOnly="true"/>
+	</channel-type>
+	<channel-type id="zone-runTotal">
+		<item-type unitHint="min">Number:Time</item-type>
+		<label>Total Run Time</label>
+		<description>Total run time of the zone.</description>
+		<state readOnly="true"/>
+	</channel-type>
+	<channel-type id="zone-imageUrl">
+		<item-type>String</item-type>
+		<label>Image URL</label>
+		<description>URL for the zone picture/image.</description>
+		<state readOnly="true"/>
+	</channel-type>
+	<channel-type id="zone-image">
+		<item-type>Image</item-type>
+		<label>Image</label>
+		<description>Zone picture/image.</description>
+		<state readOnly="true"></state>
+	</channel-type>
+	<channel-type id="zone-scheduleName">
+		<item-type>String</item-type>
+		<label>Schedule Name</label>
+		<description>Name of schedule.</description>
+	</channel-type>
+	<channel-type id="zone-scheduleInfo">
+		<item-type>String</item-type>
+		<label>Schedule Info</label>
+		<description>Brief description of schedule.</description>
+	</channel-type>
+	<channel-type id="zone-scheduleStart">
+		<item-type>DateTime</item-type>
+		<label>Schedule Start</label>
+		<description>Start of schedule.</description>
+	</channel-type>
+	<channel-type id="zone-scheduleEnd">
+		<item-type>DateTime</item-type>
+		<label>Schedule End</label>
+		<description>End of schedule.</description>
+	</channel-type>
+	<channel-type id="zone-lastWateredDate">
+		<item-type>DateTime</item-type>
+		<label>Last Watered Date</label>
+		<description>Last watered date/time</description>
+	</channel-type>
+	<channel-type id="zone-lastUpdate">
+		<item-type>DateTime</item-type>
+		<label>Last Update</label>
+		<description>Timestamp of last status update.</description>
+	</channel-type>
+	<channel-type id="zone-lastEvent">
+		<item-type>String</item-type>
+		<label>Last Event</label>
+		<description>Events can be received when callback is configured.</description>
+	</channel-type>
+	<channel-type id="zone-lastEventTime">
+		<item-type>DateTime</item-type>
+		<label>Last Event Time</label>
+		<description>Timestamp of last status update.</description>
+	</channel-type>
+</thing:thing-descriptions>
