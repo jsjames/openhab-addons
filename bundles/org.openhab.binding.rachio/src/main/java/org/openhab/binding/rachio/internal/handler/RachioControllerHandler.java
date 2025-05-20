@@ -50,6 +50,7 @@ import org.openhab.core.library.types.OnOffType;
 import org.openhab.core.library.types.PlayPauseType;
 import org.openhab.core.library.types.QuantityType;
 import org.openhab.core.library.types.StringType;
+import org.openhab.core.library.unit.Units;
 import org.openhab.core.thing.Bridge;
 import org.openhab.core.thing.ChannelUID;
 import org.openhab.core.thing.Thing;
@@ -62,8 +63,6 @@ import org.openhab.core.types.RefreshType;
 import org.openhab.core.types.UnDefType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import tech.units.indriya.unit.Units;
 
 /**
  * The {@link RachioControllerHandler} is responsible for handling commands, which are

@@ -37,16 +37,16 @@ import org.openhab.core.library.types.QuantityType;
 import org.openhab.core.library.types.RawType;
 import org.openhab.core.library.types.StringType;
 import org.openhab.core.library.unit.ImperialUnits;
+import org.openhab.core.library.unit.Units;
 import org.openhab.core.thing.ChannelUID;
 import org.openhab.core.thing.Thing;
 import org.openhab.core.thing.ThingStatus;
 import org.openhab.core.thing.ThingStatusDetail;
 import org.openhab.core.types.Command;
 import org.openhab.core.types.RefreshType;
+import org.openhab.core.types.UnDefType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import tech.units.indriya.unit.Units;
 
 /**
  * The {@link RachioZoneHandler} is responsible for handling commands, which are
@@ -269,7 +269,8 @@ public class RachioZoneHandler extends AbstractRachioThingHandler<RachioControll
         }
         if (isUpdateRequired(CHANNEL_ZONE_LAST_WATERED_DATE, forceUpdate, updateChannel, rachioApiZone.lastWateredDate,
                 newRachioApiZone.lastWateredDate)) {
-            updateState(CHANNEL_ZONE_RUN_TOTAL, new DateTimeType(newRachioApiZone.lastWateredDate.toInstant()));
+            updateState(CHANNEL_ZONE_LAST_WATERED_DATE, newRachioApiZone.lastWateredDate == null
+                            ? UnDefType.UNDEF : new DateTimeType(newRachioApiZone.lastWateredDate.toInstant()));
         }
         if (isUpdateRequired(CHANNEL_ZONE_AVAILABLE_WATER, forceUpdate, updateChannel, rachioApiZone.availableWater,
                 newRachioApiZone.availableWater)) {

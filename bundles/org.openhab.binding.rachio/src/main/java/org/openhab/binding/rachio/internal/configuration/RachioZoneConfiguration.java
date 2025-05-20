@@ -12,11 +12,14 @@
  */
 package org.openhab.binding.rachio.internal.configuration;
 
+import org.eclipse.jdt.annotation.NonNullByDefault;
+
 /**
  * The {@link RachioZoneConfiguration}
  *
  * @author Jeff James - Initial contribution
  */
+@NonNullByDefault
 public class RachioZoneConfiguration {
     public String id = "";
     public int defaultRunTime = 0;

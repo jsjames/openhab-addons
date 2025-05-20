@@ -22,9 +22,8 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.core.library.types.DecimalType;
 import org.openhab.core.library.types.QuantityType;
+import org.openhab.core.library.unit.Units;
 import org.openhab.core.types.Command;
-
-import tech.units.indriya.unit.Units;
 
 /**
  * {@link RachioUtils} provides some helper functions
@@ -124,7 +123,7 @@ public class RachioUtils {
      *         occurs while retrieving the object.
      */
     @Nullable
-    public static <@Nullable T> T safeGet(Supplier<T> supplier) {
+    public static <T> T safeGet(Supplier<T> supplier) {
         try {
             return supplier.get();
         } catch (NullPointerException e) {
