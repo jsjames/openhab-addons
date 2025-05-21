@@ -55,7 +55,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * {@link RachioBridgeHandler} is responsible for implementing the cloud api access.
+ * {@link RachioCloudConnector} is responsible for implementing the cloud api access.
  * The concept of a Bridge is used. In general multiple bridges are supported using different API keys.
  * Devices are linked to the bridge. All devices and zones go offline if the cloud api access fails.
  *
@@ -63,8 +63,8 @@ import org.slf4j.LoggerFactory;
  * @author Jeff James - initial contribution
  */
 @NonNullByDefault
-public class RachioBridgeHandler extends BaseBridgeHandler {
-    private final Logger logger = LoggerFactory.getLogger(RachioBridgeHandler.class);
+public class RachioCloudConnector extends BaseBridgeHandler {
+    private final Logger logger = LoggerFactory.getLogger(RachioCloudConnector.class);
     private final RachioApi rachioApi;
     private @Nullable RachioDiscoveryService discoveryService;
     private RachioBridgeConfiguration config;
@@ -82,7 +82,7 @@ public class RachioBridgeHandler extends BaseBridgeHandler {
     private ScheduledFuture<?> pollingJob;
     private boolean jobPending = false;
 
-    public RachioBridgeHandler(final Bridge bridge, HttpClient httpClient, HttpService httpService) {
+    public RachioCloudConnector(final Bridge bridge, HttpClient httpClient, HttpService httpService) {
         super(bridge);
         rachioApi = new RachioApi(httpClient);
         rachioWebhookServlet = new RachioWebhookServlet(httpService, this);
@@ -95,7 +95,7 @@ public class RachioBridgeHandler extends BaseBridgeHandler {
         scheduler.execute(this::goOnline);
     }
 
-    public void goOnline() {
+    public synchronized void goOnline() {
         String errorMessage = "";
 
         try {
@@ -214,13 +214,13 @@ public class RachioBridgeHandler extends BaseBridgeHandler {
             }
 
             RachioApiPerson localRachioApiPerson = rachioApi.getPerson(personId);
-            RachioUtils.compareCollections(localRachioApiPerson.devices.keySet(), controllerHandlers.keySet(),
+            RachioUtils.compareCollections(localRachioApiPerson.devices().keySet(), controllerHandlers.keySet(),
                     id -> localDiscoveryService.notifyDiscoveryController(getThing().getUID(),
-                            requireNonNull(localRachioApiPerson.devices.get(id))),
+                            requireNonNull(localRachioApiPerson.devices().get(id))),
                     id -> requireNonNull(controllerHandlers.get(id)).goOffline(ThingStatusDetail.GONE,
                             "@text/controller-removed"),
                     id -> requireNonNull(controllerHandlers.get(id))
-                            .onStatusRefresh(requireNonNull(localRachioApiPerson.devices.get(id))));
+                            .onStatusRefresh(requireNonNull(localRachioApiPerson.devices().get(id))));
             rachioApiPersonCache.putValue(localRachioApiPerson);
 
             Map<RachioId.BaseStation, RachioApiBaseStation> rachioApiBaseStations = rachioApi.getBaseStations(personId);
@@ -297,7 +297,7 @@ public class RachioBridgeHandler extends BaseBridgeHandler {
             return null;
         }
 
-        return rachioApiPerson.devices;
+        return rachioApiPerson.devices();
     }
 
     @Nullable
@@ -337,11 +337,11 @@ public class RachioBridgeHandler extends BaseBridgeHandler {
      */
     public boolean webhookEvent(RachioApiEvent event) {
         // TODO
-        if (controllerHandlers.get(event.id) instanceof RachioControllerHandler rachioControllerHandler) {
+        if (controllerHandlers.get(event.deviceId()) instanceof RachioControllerHandler rachioControllerHandler) {
             return rachioControllerHandler.webhookEvent(event);
         } else {
-            logger.debug("RachioCloud: Event {}.{} for unknown device {}: {}", event.category, event.type,
-                    event.deviceId, event.summary);
+            logger.debug("RachioCloud: Event {}.{} for unknown device {}: {}", event.category(), event.type(),
+                    event.deviceId(), event.summary());
         }
         return false;
     }
@@ -376,9 +376,9 @@ public class RachioBridgeHandler extends BaseBridgeHandler {
         }
 
         Map<String, String> properties = new HashMap<>();
-        properties.put(PROPERTY_PERSON_USER, rachioApiPerson.username);
-        properties.put(PROPERTY_PERSON_NAME, rachioApiPerson.fullName);
-        properties.put(PROPERTY_PERSON_EMAIL, rachioApiPerson.email);
+        properties.put(PROPERTY_PERSON_USER, rachioApiPerson.username());
+        properties.put(PROPERTY_PERSON_NAME, rachioApiPerson.fullName());
+        properties.put(PROPERTY_PERSON_EMAIL, rachioApiPerson.email());
         updateProperties(properties);
     }
 

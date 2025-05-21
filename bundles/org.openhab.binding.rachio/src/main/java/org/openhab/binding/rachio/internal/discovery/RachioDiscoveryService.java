@@ -21,7 +21,7 @@ import org.openhab.binding.rachio.internal.api.dto.RachioApiBaseStation;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiDevice;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiValve;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiZone;
-import org.openhab.binding.rachio.internal.handler.RachioBridgeHandler;
+import org.openhab.binding.rachio.internal.handler.RachioCloudConnector;
 import org.openhab.core.config.discovery.AbstractThingHandlerDiscoveryService;
 import org.openhab.core.config.discovery.DiscoveryResult;
 import org.openhab.core.config.discovery.DiscoveryResultBuilder;
@@ -38,7 +38,7 @@ import org.openhab.core.thing.ThingUID;
  * @author Jeff James - Initial contribution
  */
 @NonNullByDefault
-public class RachioDiscoveryService extends AbstractThingHandlerDiscoveryService<RachioBridgeHandler> {
+public class RachioDiscoveryService extends AbstractThingHandlerDiscoveryService<RachioCloudConnector> {
     private static final Set<ThingTypeUID> DISCOVERABLE_THING_TYPE_UIDS = Set.of(THING_TYPE_CONTROLLER, THING_TYPE_ZONE,
             THING_TYPE_BASE_STATION, THING_TYPE_VALVE);
 
@@ -55,7 +55,7 @@ public class RachioDiscoveryService extends AbstractThingHandlerDiscoveryService
     }
 
     public RachioDiscoveryService() {
-        super(RachioBridgeHandler.class, DISCOVERABLE_THING_TYPE_UIDS, 0, false);
+        super(RachioCloudConnector.class, DISCOVERABLE_THING_TYPE_UIDS, 0, false);
     }
 
     @Override
@@ -67,45 +67,54 @@ public class RachioDiscoveryService extends AbstractThingHandlerDiscoveryService
     }
 
     public void notifyDiscoveryController(ThingUID bridgeUID, RachioApiDevice device) {
-        ThingUID uid = new ThingUID(THING_TYPE_CONTROLLER, bridgeUID, device.name.replace(" ", "-"));
+        ThingUID uid = new ThingUID(THING_TYPE_CONTROLLER, bridgeUID, device.name().replace(" ", "-"));
 
-        DiscoveryResult result = DiscoveryResultBuilder.create(uid).withBridge(bridgeUID)
-                .withProperty(PARAM_ID, device.getId().id()).withRepresentationProperty(PARAM_ID).withLabel(device.name)
+        DiscoveryResult result = DiscoveryResultBuilder.create(uid).withBridge(bridgeUID) //
+                .withProperty(PARAM_ID, device.id().idString()) //
+                .withRepresentationProperty(PARAM_ID).withLabel(device.name()) //
                 .build();
 
         thingDiscovered(result);
     }
 
     public void notifyDiscoveryZone(ThingUID bridgeUID, String bridgeLabel, RachioApiZone zone) {
-        ThingUID uid = new ThingUID(THING_TYPE_ZONE, bridgeUID, String.format("zone-%02d", zone.zoneNumber));
+        ThingUID uid = new ThingUID(THING_TYPE_ZONE, bridgeUID, String.format("zone-%02d", zone.zoneNumber()));
         final String zoneLabelFormat = "%s [%02d]: %s";
 
-        DiscoveryResult result = DiscoveryResultBuilder.create(uid).withBridge(bridgeUID)
-                .withProperty(PARAM_ID, zone.getId().id()).withRepresentationProperty(PARAM_ID)
-                .withLabel(String.format(zoneLabelFormat, bridgeLabel, zone.zoneNumber, zone.name)).build();
+        DiscoveryResult result = DiscoveryResultBuilder.create(uid).withBridge(bridgeUID) //
+                .withProperty(PARAM_ID, zone.id().idString()) //
+                .withRepresentationProperty(PARAM_ID) //
+                .withLabel(String.format(zoneLabelFormat, bridgeLabel, zone.zoneNumber(), zone.name())) //
+                .build();
 
         thingDiscovered(result);
     }
 
     public void notifyDiscoveryBaseStation(ThingUID bridgeUID, RachioApiBaseStation baseStation) {
-        String shortId = baseStation.getId().id().substring(baseStation.getId().id().length() - 6).toUpperCase();
+        String idString = baseStation.id().idString();
+        String shortId = idString.substring(idString.length() - 6).toUpperCase();
         ThingUID uid = new ThingUID(THING_TYPE_BASE_STATION, bridgeUID, "base-station-" + shortId);
 
-        DiscoveryResult result = DiscoveryResultBuilder.create(uid).withBridge(bridgeUID)
-                .withProperty(PARAM_ID, baseStation.getId().id()).withRepresentationProperty(PARAM_ID)
-                .withLabel("Base Station-" + shortId).build();
+        DiscoveryResult result = DiscoveryResultBuilder.create(uid).withBridge(bridgeUID) //
+                .withProperty(PARAM_ID, idString) //
+                .withRepresentationProperty(PARAM_ID) //
+                .withLabel("Base Station-" + shortId) //
+                .build();
 
         thingDiscovered(result);
     }
 
     public void notifyDiscoveryValve(ThingUID bridgeUID, String bridgeLabel, RachioApiValve valve) {
-        String shortId = valve.getId().id().substring(valve.getId().id().length() - 6).toUpperCase();
+        String id = valve.id().idString();
+        String shortId = id.substring(id.length() - 6).toUpperCase();
         ThingUID uid = new ThingUID(THING_TYPE_VALVE, bridgeUID, "valve-" + shortId);
         final String valveLabelFormat = "%s: %s";
 
-        DiscoveryResult result = DiscoveryResultBuilder.create(uid).withBridge(bridgeUID)
-                .withProperty(PARAM_ID, valve.getId().id()).withRepresentationProperty(PARAM_ID)
-                .withLabel(String.format(valveLabelFormat, bridgeLabel, valve.name)).build();
+        DiscoveryResult result = DiscoveryResultBuilder.create(uid).withBridge(bridgeUID) //
+                .withProperty(PARAM_ID, id) //
+                .withRepresentationProperty(PARAM_ID) //
+                .withLabel(String.format(valveLabelFormat, bridgeLabel, valve.name())) //
+                .build();
 
         thingDiscovered(result);
     }

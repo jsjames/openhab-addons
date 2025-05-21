@@ -22,131 +22,72 @@ import org.openhab.binding.rachio.internal.api.RachioId;
  *
  * @author Markus Michels - Initial contribution
  */
-public class RachioApiEvent {
-    public String externalId;
-    public String routingId;
-    public String connectId;
-    public String correlationId;
-    public String scheduleId;
-    public String deviceId;
-    public String zoneId;
-    public RachioId.Event id;
+public record RachioApiEvent( //
+        String externalId, //
+        String routingId, //
+        String connectId, //
+        String correlationId, //
+        String scheduleId, //
+        String deviceId, //
+        String zoneId, //
+        RachioId.Event id, //
 
-    public String timeZone;
-    public String timestamp;
-    public String timeForSummary;
-    public String startTime;
-    public String endTime;
+        String timeZone, //
+        String timestamp, //
+        String timeForSummary, //
+        String startTime, //
+        String endTime, //
 
-    public Date eventDate;
-    public Date createDate;
-    public Date lastUpdateDate;
-    public int sequence;
-    public String status; // COLD_REBOOT: "status" :
-                          // "coldReboot",
+        Date eventDate, //
+        Date createDate, //
+        Date lastUpdateDate, //
+        int sequence, //
+        String status, //
 
-    /*
-     * type : DEVICE_STATUS
-     *
-     * Subtype:
-     *
-     * OFFLINE
-     * ONLINE
-     * OFFLINE_NOTIFICATION
-     * COLD_REBOOT
-     * SLEEP_MODE_ON
-     * SLEEP_MODE_OFF
-     * BROWNOUT_VALVE
-     * RAIN_SENSOR_DETECTION_ON
-     * RAIN_SENSOR_DETECTION_OFF
-     * RAIN_DELAY_ON
-     * RAIN_DELAY_OFF
-     *
-     * Type : SCHEDULE_STATUS
-     *
-     * Subtype:
-     *
-     * SCHEDULE_STARTED
-     * SCHEDULE_STOPPED
-     * SCHEDULE_COMPLETED
-     * WEATHER_INTELLIGENCE_NO_SKIP
-     * WEATHER_INTELLIGENCE_SKIP
-     * WEATHER_INTELLIGENCE_CLIMATE_SKIP
-     * WEATHER_INTELLIGENCE_FREEZE
-     *
-     * Type : ZONE_STATUS
-     *
-     * Subtype:
-     *
-     * ZONE_STARTED
-     * ZONE_STOPPED
-     * ZONE_COMPLETED
-     * ZONE_CYCLING
-     * ZONE_CYCLING_COMPLETED
-     *
-     * Type : DEVICE_DELTA
-     * Subtype : DEVICE_DELTA
-     *
-     * Type : ZONE_DELTA
-     * Subtype : ZONE_DELTA
-     *
-     * Type : SCHEDULE_DELTA
-     * Subtype : SCHEDULE_DELTA
-     */
-    public String type;
-    public String subType;
-    public String eventType;
-    public String category;
-    public String topic;
-    public String action;
-    public String summary;
-    public String description;
-    public String title;
-    public String pushTitle;
+        String type, //
+        String subType, //
+        String eventType, //
+        String category, //
+        String topic, //
+        String action, //
+        String summary, //
+        String description, //
+        String title, //
+        String pushTitle, //
 
-    public String icon;
-    public String iconUrl;
+        String icon, //
+        String iconUrl, //
 
-    // ZONE_STATUS
-    public Integer zoneNumber;
-    public String zoneName;
-    public Integer zoneCurrent;
-    public String zoneRunState;
-    public Integer duration;
-    public Integer durationInMinutes;
-    public Integer flowVolume;
-    public RachioZoneStatus zoneRunStatus;
+        Integer zoneNumber, //
+        String zoneName, //
+        Integer zoneCurrent, //
+        String zoneRunState, //
+        Integer duration, //
+        Integer durationInMinutes, //
+        Integer flowVolume, //
+        RachioZoneStatus zoneRunStatus, //
 
-    // SCHEDULE_STATUS
-    public String scheduleName;
-    public String scheduleType;
+        String scheduleName, //
+        String scheduleType, //
 
-    // COLD_REBOOT
-    public String deviceName; // "deviceName" : "My
-                              // Rachio",
-    // public RachioCloudNetworkSettings network; // "network" : {}
-    String pin;
+        String deviceName, //
+        String pin, //
 
-    // public JsonArray eventDatas;
-    public Map<String, String> eventParms;
-    public Map<String, RachioEventProperty> deltaProperties;
-
-    public static class RachioZoneStatus {
-        public Integer duration;
-        public String scheduleType;
-        public Integer zoneNumber;
-        public String executionType;
-        public String state;
-        public String startTime;
-        public String endTime;
-        // public Integer corId = 0; // currently unused
-        // public Integer seqId = 0; // currently unused
-        // public Integer ix = 0; // currently unused
+        Map<String, String> eventParms, //
+        Map<String, RachioEventProperty> deltaProperties) {
+    public static record RachioZoneStatus( //
+            Integer duration, //
+            String scheduleType, //
+            Integer zoneNumber, //
+            String executionType, //
+            String state, //
+            String startTime, //
+            String endTime) {
     }
 
-    public static class RachioEventProperty {
-        public String propertyName;
-        public String oldValue;
-        public String newValue;
+    public static record RachioEventProperty( //
+            String propertyName, //
+            String oldValue, //
+            String newValue) {
     }
 }

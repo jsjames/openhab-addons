@@ -16,31 +16,27 @@ package org.openhab.binding.rachio.internal.api.dto;
 import java.time.Instant;
 
 import org.openhab.binding.rachio.internal.api.RachioId;
-import org.openhab.binding.rachio.utils.Id;
 
 /**
  * {@link RachioApiBaseStation}
  *
  * @author Jeff James - Initial contribution
  */
-public class RachioApiBaseStation implements Id<RachioId.BaseStation> {
-    public RachioId.BaseStation id;
-    public String serialNumber;
-    public String macAddress;
-    public ReportedState reportedState;
-    public Instant created;
-    public Instant updated;
-    public boolean shared;
+public record RachioApiBaseStation( //
+        RachioId.BaseStation id, //
+        String serialNumber, //
+        String macAddress, //
+        ReportedState reportedState, //
+        Instant created, //
+        Instant updated, //
+        boolean shared) {
 
-    public static class ReportedState {
-        public boolean connected;
-        public String bleHubFirmwareVersion;
-        public String wifiBridgeFirmwareVersion;
+    public static record ReportedState( //
+            boolean connected, //
+            String bleHubFirmwareVersion, //
+            String wifiBridgeFirmwareVersion) {
     }
 
-    public RachioId.BaseStation getId() {
-        return id;
-    }
-
-    public static final RachioApiBaseStation EMPTY = new RachioApiBaseStation();
+    public static final RachioApiBaseStation EMPTY = new RachioApiBaseStation(null, null, null, null, null, null,
+            false);
 }

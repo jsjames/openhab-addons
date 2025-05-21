@@ -17,7 +17,6 @@ import static org.openhab.binding.rachio.internal.RachioUtils.isUpdateRequired;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
@@ -73,18 +72,11 @@ public class RachioZoneHandler extends AbstractRachioThingHandler<RachioControll
 
     @Override
     public void initialize() {
-        logger.debug("ZoneHandler Initialize");
-        if (id.toString().isEmpty()) {
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, "@text/zone-configuration-issue");
-        }
-        updateStatus(ThingStatus.UNKNOWN);
-        // only goOnline if bridge is ONLINE, otherwise wait for bridgeStatusChange
-        if (Objects.requireNonNull(getBridge()).getStatus() == ThingStatus.ONLINE) {
-            scheduler.execute(this::goOnline);
-        }
+        super.initialize();
+        scheduler.execute(this::goOnline);
     }
 
-    public void goOnline() {
+    public synchronized void goOnline() {
         if (getThing().getStatus() == ThingStatus.ONLINE || !checkBridgeStatus()) {
             return;
         }
@@ -134,9 +126,10 @@ public class RachioZoneHandler extends AbstractRachioThingHandler<RachioControll
                 case CHANNEL_ZONE_RUN:
                     if (command == OnOffType.ON) {
                         int runtime = getDefaultRunTime();
-                        logger.debug("Starting zone {} for {} min", rachioApiZone.name, runtime);
+                        logger.debug("Starting zone {} for {} min", rachioApiZone.name(), runtime);
                         api.putZoneStartWatering(id, runtime * 60);
-                        getBridgeHandler().updateZoneRunning();
+                        Thread.sleep(5000);
+                        getBridgeHandler().updateZoneRunning(id);
                     } else {
                         api.putStopWatering(getBridgeHandler().getId());
                     }
@@ -154,8 +147,8 @@ public class RachioZoneHandler extends AbstractRachioThingHandler<RachioControll
 
                     if (runtime > 0) {
                         api.putZoneStartWatering(id, runtime * 60);
-                        getBridgeHandler().updateZoneRunning();
-                        logger.debug("Zone {} will start for {} min", rachioApiZone.name, runtime);
+                        getBridgeHandler().updateZoneRunning(id);
+                        logger.debug("Zone {} will start for {} min", rachioApiZone.name(), runtime);
                     }
                     break;
             }
@@ -173,7 +166,7 @@ public class RachioZoneHandler extends AbstractRachioThingHandler<RachioControll
             return;
         }
 
-        if (!rachioApiZone.getId().equals(id)) {
+        if (!rachioApiZone.id().equals(id)) {
             logger.error("Zone ID does not match configuration");
             return;
         }
@@ -187,35 +180,38 @@ public class RachioZoneHandler extends AbstractRachioThingHandler<RachioControll
 
     public boolean webhookEvent(RachioApiEvent event) {
         try {
-            switch (event.type) {
+            switch (event.type()) {
                 case "ZONE_STATUS":
-                    switch (event.subType) {
+                    switch (event.subType()) {
                         case "ZONE_STARTED":
-                            logger.info("Zone {} STARTED watering ({}).", rachioApiZone.name, event.timestamp);
+                            logger.info("Zone {} STARTED watering ({}).", rachioApiZone.name(), event.timestamp());
                             // TODO duration
                             updateZoneRunning(true, 0);
                             break;
                         case "ZONE_STOPPED":
                             logger.info(
                                     "Zoned {} STOPPED watering (timestamp={}, current={}, duration={}sec/{}min, flowVolume={}).",
-                                    rachioApiZone.name, event.timestamp, event.zoneCurrent, event.duration,
-                                    event.durationInMinutes, event.flowVolume);
+                                    rachioApiZone.name(), event.timestamp(), event.zoneCurrent(), event.duration(),
+                                    event.durationInMinutes(), event.flowVolume());
                             // TODO duration
                             updateZoneRunning(false, 0);
                             break;
                         case "ZONE_COMPLETED":
                         case "ZONE_CYCLING":
                         case "ZONE_CYCLING_COMPLETED":
-                            logger.info("Event for zone {}: {} (status={}, duration = {}sec)", event.zoneName,
-                                    event.summary, event.zoneRunStatus.state, event.duration);
+                            logger.info("Event for zone {}: {} (status={}, duration = {}sec)", event.zoneName(),
+                                    event.summary(),
+                                    event.zoneRunStatus() != null ? event.zoneRunStatus().state() : "N/A",
+                                    event.duration());
                             break;
                     }
                 case "ZONE_DELTA":
-                    logger.info("DELTA Event for zone {}: {}.{}", rachioApiZone.name, event.category, event.action);
+                    logger.info("DELTA Event for zone {}: {}.{}", rachioApiZone.name(), event.category(),
+                            event.action());
                     break;
                 default:
-                    logger.debug("Unhandled event type {}.{} for zone {}", event.type, event.subType,
-                            rachioApiZone.name);
+                    logger.debug("Unhandled event type {}.{} for zone {}", event.type(), event.subType(),
+                            rachioApiZone.name());
             }
         } catch (RuntimeException e) {
             logger.debug("Unable to process event: {}", e.getLocalizedMessage());
@@ -235,17 +231,17 @@ public class RachioZoneHandler extends AbstractRachioThingHandler<RachioControll
             newRachioApiZone = getBridgeHandler().getZoneById(id);
         }
 
-        if (isUpdateRequired(CHANNEL_ZONE_NAME, forceUpdate, updateChannel, rachioApiZone.name,
-                newRachioApiZone.name)) {
-            updateState(CHANNEL_ZONE_NAME, new StringType(newRachioApiZone.name));
+        if (isUpdateRequired(CHANNEL_ZONE_NAME, forceUpdate, updateChannel, rachioApiZone.name(),
+                newRachioApiZone.name())) {
+            updateState(CHANNEL_ZONE_NAME, new StringType(newRachioApiZone.name()));
         }
-        if (isUpdateRequired(CHANNEL_ZONE_NUMBER, forceUpdate, updateChannel, rachioApiZone.zoneNumber,
-                newRachioApiZone.zoneNumber)) {
-            updateState(CHANNEL_ZONE_NUMBER, new DecimalType(newRachioApiZone.zoneNumber));
+        if (isUpdateRequired(CHANNEL_ZONE_NUMBER, forceUpdate, updateChannel, rachioApiZone.zoneNumber(),
+                newRachioApiZone.zoneNumber())) {
+            updateState(CHANNEL_ZONE_NUMBER, new DecimalType(newRachioApiZone.zoneNumber()));
         }
-        if (isUpdateRequired(CHANNEL_ZONE_ENABLED, forceUpdate, updateChannel, rachioApiZone.enabled,
-                newRachioApiZone.enabled)) {
-            updateState(CHANNEL_ZONE_ENABLED, OnOffType.from(newRachioApiZone.enabled));
+        if (isUpdateRequired(CHANNEL_ZONE_ENABLED, forceUpdate, updateChannel, rachioApiZone.enabled(),
+                newRachioApiZone.enabled())) {
+            updateState(CHANNEL_ZONE_ENABLED, OnOffType.from(newRachioApiZone.enabled()));
         }
         if (forceUpdate || CHANNEL_ZONE_RUN.equals(updateChannel)) {
             updateState(CHANNEL_ZONE_RUN, OnOffType.from(running));
@@ -253,44 +249,44 @@ public class RachioZoneHandler extends AbstractRachioThingHandler<RachioControll
         if (forceUpdate || CHANNEL_ZONE_RUN_TIME.equals(updateChannel)) {
             updateState(CHANNEL_ZONE_RUN_TIME, new QuantityType<>(runningDuration, Units.MINUTE));
         }
-        if (isUpdateRequired(CHANNEL_ZONE_RUN_TOTAL, forceUpdate, updateChannel, rachioApiZone.runtime,
-                newRachioApiZone.runtime)) {
-            updateState(CHANNEL_ZONE_RUN_TOTAL, new DecimalType(newRachioApiZone.runtime));
+        if (isUpdateRequired(CHANNEL_ZONE_RUN_TOTAL, forceUpdate, updateChannel, rachioApiZone.runtime(),
+                newRachioApiZone.runtime())) {
+            updateState(CHANNEL_ZONE_RUN_TOTAL, new DecimalType(newRachioApiZone.runtime()));
         }
-        if (isUpdateRequired(CHANNEL_ZONE_IMAGEURL, forceUpdate, updateChannel, rachioApiZone.imageUrl,
-                newRachioApiZone.imageUrl) || CHANNEL_ZONE_IMAGE.equals(updateChannel)) {
-            updateState(CHANNEL_ZONE_IMAGEURL, new StringType(newRachioApiZone.imageUrl));
+        if (isUpdateRequired(CHANNEL_ZONE_IMAGEURL, forceUpdate, updateChannel, rachioApiZone.imageUrl(),
+                newRachioApiZone.imageUrl()) || CHANNEL_ZONE_IMAGE.equals(updateChannel)) {
+            updateState(CHANNEL_ZONE_IMAGEURL, new StringType(newRachioApiZone.imageUrl()));
             if (isLinked(CHANNEL_ZONE_IMAGE)) {
-                RawType imageType = api.getImageFromURL(newRachioApiZone.imageUrl);
+                RawType imageType = api.getImageFromURL(newRachioApiZone.imageUrl());
                 if (imageType != null) {
                     updateState(CHANNEL_ZONE_IMAGE, imageType);
                 }
             }
         }
-        if (isUpdateRequired(CHANNEL_ZONE_LAST_WATERED_DATE, forceUpdate, updateChannel, rachioApiZone.lastWateredDate,
-                newRachioApiZone.lastWateredDate)) {
-            updateState(CHANNEL_ZONE_LAST_WATERED_DATE, newRachioApiZone.lastWateredDate == null
-                            ? UnDefType.UNDEF : new DateTimeType(newRachioApiZone.lastWateredDate.toInstant()));
+        if (isUpdateRequired(CHANNEL_ZONE_LAST_WATERED_DATE, forceUpdate, updateChannel,
+                rachioApiZone.lastWateredDate(), newRachioApiZone.lastWateredDate())) {
+            updateState(CHANNEL_ZONE_LAST_WATERED_DATE, newRachioApiZone.lastWateredDate() == null ? UnDefType.UNDEF
+                    : new DateTimeType(newRachioApiZone.lastWateredDate().toInstant()));
         }
-        if (isUpdateRequired(CHANNEL_ZONE_AVAILABLE_WATER, forceUpdate, updateChannel, rachioApiZone.availableWater,
-                newRachioApiZone.availableWater)) {
+        if (isUpdateRequired(CHANNEL_ZONE_AVAILABLE_WATER, forceUpdate, updateChannel, rachioApiZone.availableWater(),
+                newRachioApiZone.availableWater())) {
             updateState(CHANNEL_ZONE_AVAILABLE_WATER,
-                    new QuantityType<>(newRachioApiZone.availableWater, ImperialUnits.INCH));
+                    new QuantityType<>(newRachioApiZone.availableWater(), ImperialUnits.INCH));
         }
-        if (isUpdateRequired(CHANNEL_ZONE_DEPTH_OF_WATER, forceUpdate, updateChannel, rachioApiZone.depthOfWater,
-                newRachioApiZone.depthOfWater)) {
+        if (isUpdateRequired(CHANNEL_ZONE_DEPTH_OF_WATER, forceUpdate, updateChannel, rachioApiZone.depthOfWater(),
+                newRachioApiZone.depthOfWater())) {
             updateState(CHANNEL_ZONE_DEPTH_OF_WATER,
-                    new QuantityType<>(newRachioApiZone.depthOfWater, ImperialUnits.INCH));
+                    new QuantityType<>(newRachioApiZone.depthOfWater(), ImperialUnits.INCH));
         }
         if (isUpdateRequired(CHANNEL_ZONE_DEPLETION_LEVEL, forceUpdate, updateChannel,
-                rachioApiZone.managementAllowedDepletion, newRachioApiZone.managementAllowedDepletion)) {
+                rachioApiZone.managementAllowedDepletion(), newRachioApiZone.managementAllowedDepletion())) {
             updateState(CHANNEL_ZONE_DEPLETION_LEVEL,
-                    new QuantityType<>(newRachioApiZone.managementAllowedDepletion, ImperialUnits.INCH));
+                    new QuantityType<>(newRachioApiZone.managementAllowedDepletion(), ImperialUnits.INCH));
         }
         if (isUpdateRequired(CHANNEL_ZONE_SATURATION_DEPTH, forceUpdate, updateChannel,
-                rachioApiZone.saturatedDepthOfWater, newRachioApiZone.saturatedDepthOfWater)) {
+                rachioApiZone.saturatedDepthOfWater(), newRachioApiZone.saturatedDepthOfWater())) {
             updateState(CHANNEL_ZONE_SATURATION_DEPTH,
-                    new QuantityType<>(newRachioApiZone.saturatedDepthOfWater, ImperialUnits.INCH));
+                    new QuantityType<>(newRachioApiZone.saturatedDepthOfWater(), ImperialUnits.INCH));
         }
 
         // TODO updateChannel(CHANNEL_LAST_EVENT, new StringType(z.getEvent()));
@@ -300,7 +296,7 @@ public class RachioZoneHandler extends AbstractRachioThingHandler<RachioControll
 
     private void updateProperties() {
         Map<String, String> properties = new HashMap<>();
-        properties.put(PROPERTY_NAME, rachioApiZone.name);
+        properties.put(PROPERTY_NAME, rachioApiZone.name());
         updateProperties(properties);
     }
 }

@@ -23,27 +23,26 @@ import org.openhab.binding.rachio.internal.api.RachioId;
  *
  * @author Jeff James - Initial contribution
  */
-class RachioApiScheduleRule {
-    public RachioId.Schedule id;
-    public List<RachioCloudScheduleRuleZone> zones;
-    public List<String> scheduleJobTypes;
-    public String summary;
-    public boolean rainDelay;
-    public boolean waterBudget;
-    public String cycleSoakStatus;
-    public Date startDate;
-    public String name;
-    public boolean enabled;
-    public int totalDuration;
-    public float weatherInteligenceSensitivity;
-    public float seasonalAdjustement;
-    public int cycles;
-    public boolean cycleSoak;
-
-    public static class RachioCloudScheduleRuleZone {
-        public RachioId.Zone zoneId;
-        public int zoneNumber;
-        public int duration;
-        public int sortOrder;
+public record RachioApiScheduleRule( //
+        RachioId.Schedule id, //
+        List<RachioCloudScheduleRuleZone> zones, //
+        List<String> scheduleJobTypes, //
+        String summary, //
+        boolean rainDelay, //
+        boolean waterBudget, //
+        String cycleSoakStatus, //
+        Date startDate, //
+        String name, //
+        boolean enabled, //
+        int totalDuration, //
+        float weatherInteligenceSensitivity, //
+        float seasonalAdjustement, //
+        int cycles, //
+        boolean cycleSoak) {
+    public record RachioCloudScheduleRuleZone( //
+            RachioId.Zone zoneId, //
+            int zoneNumber, //
+            int duration, //
+            int sortOrder) {
     }
 }

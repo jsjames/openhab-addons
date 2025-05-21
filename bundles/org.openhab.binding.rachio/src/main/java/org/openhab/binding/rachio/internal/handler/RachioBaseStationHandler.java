@@ -47,7 +47,7 @@ import org.slf4j.LoggerFactory;
  * @author Jeff James - Initial contribution
  */
 @NonNullByDefault
-public class RachioBaseStationHandler extends AbstractRachioBridgeHandler<RachioBridgeHandler, RachioId.BaseStation> {
+public class RachioBaseStationHandler extends AbstractRachioBridgeHandler<RachioCloudConnector, RachioId.BaseStation> {
     private final Logger logger = LoggerFactory.getLogger(RachioBaseStationHandler.class);
 
     RachioApiBaseStation rachioApiBaseStation = RachioApiBaseStation.EMPTY;
@@ -62,20 +62,11 @@ public class RachioBaseStationHandler extends AbstractRachioBridgeHandler<Rachio
 
     @Override
     public void initialize() {
-        logger.debug("Controller handler initialize");
-        if (id.toString().isBlank()) {
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR,
-                    "@text/base-station-configuration-issue");
-            return;
-        }
-        updateStatus(ThingStatus.UNKNOWN);
-        // only goOnline if bridge is ONLINE, otherwise wait for bridgeStatusChange
-        if (Objects.requireNonNull(getBridge()).getStatus() == ThingStatus.ONLINE) {
-            scheduler.execute(this::goOnline);
-        }
+        super.initialize();
+        scheduler.execute(this::goOnline);
     }
 
-    public void goOnline() {
+    public synchronized void goOnline() {
         if (getThing().getStatus() == ThingStatus.ONLINE || !checkBridgeStatus()) {
             return;
         }
@@ -90,7 +81,7 @@ public class RachioBaseStationHandler extends AbstractRachioBridgeHandler<Rachio
         updateProperties();
         refreshValves();
 
-        if (rachioApiBaseStation.reportedState.connected == true) {
+        if (rachioApiBaseStation.reportedState().connected() == true) {
             updateStatus(ThingStatus.ONLINE);
         } else {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.NONE, "@text/base-station-offline");
@@ -144,12 +135,12 @@ public class RachioBaseStationHandler extends AbstractRachioBridgeHandler<Rachio
             return;
         }
 
-        if (!rachioApiBaseStation.getId().equals(id)) {
+        if (!rachioApiBaseStation.id().equals(id)) {
             logger.error("Controller ID does not match configuration.");
             return;
         }
 
-        ThingStatus baseStationStatus = rachioApiBaseStation.reportedState.connected ? ThingStatus.ONLINE
+        ThingStatus baseStationStatus = rachioApiBaseStation.reportedState().connected() ? ThingStatus.ONLINE
                 : ThingStatus.OFFLINE;
         ThingStatus thingStatus = getThing().getStatus();
         if (thingStatus == ThingStatus.OFFLINE & baseStationStatus == ThingStatus.ONLINE) {
@@ -183,8 +174,8 @@ public class RachioBaseStationHandler extends AbstractRachioBridgeHandler<Rachio
     private void updateProperties() {
         Map<String, String> properties = new HashMap<>();
         properties.put(Thing.PROPERTY_VENDOR, RachioBindingConstants.BINDING_VENDOR);
-        properties.put(Thing.PROPERTY_SERIAL_NUMBER, rachioApiBaseStation.serialNumber);
-        properties.put(Thing.PROPERTY_MAC_ADDRESS, rachioApiBaseStation.macAddress);
+        properties.put(Thing.PROPERTY_SERIAL_NUMBER, rachioApiBaseStation.serialNumber());
+        properties.put(Thing.PROPERTY_MAC_ADDRESS, rachioApiBaseStation.macAddress());
 
         updateProperties(properties);
     }

@@ -16,7 +16,6 @@ import java.util.List;
 
 import org.eclipse.jdt.annotation.NonNull;
 import org.openhab.binding.rachio.internal.api.RachioId;
-import org.openhab.binding.rachio.utils.Id;
 
 import com.google.gson.annotations.SerializedName;
 
@@ -25,28 +24,18 @@ import com.google.gson.annotations.SerializedName;
  *
  * @author Jeff James - Initial contribution
  */
-public class RachioApiWebhook implements Id<RachioId.Webhook> {
-    public RachioId.Webhook id;
-    @SerializedName("external_id")
-    public String externalId;
-    @SerializedName("resource_id")
-    public RachioApiWebhookResorceID resourceId;
-    public String url;
-    @SerializedName("event_types")
-    public List<@NonNull String> eventTypes;
+public record RachioApiWebhook( //
+        RachioId.Webhook id, //
+        @SerializedName("external_id") String externalId, //
+        @SerializedName("resource_id") RachioApiWebhookResourceID resourceId, //
+        String url, //
+        @SerializedName("event_types") List<@NonNull String> eventTypes) {
 
-    public static class RachioApiWebhookResorceID {
-        @SerializedName("valve_id")
-        public RachioId.Valve valveId;
-        @SerializedName("irrigation_controller_id")
-        public RachioId.Device irrigationControllerId;
-        @SerializedName("program_id")
-        public RachioId.Program programId;
+    public static record RachioApiWebhookResourceID( //
+            @SerializedName("valve_id") RachioId.Valve valveId, //
+            @SerializedName("irrigation_controller_id") RachioId.Device irrigationControllerId, //
+            @SerializedName("program_id") RachioId.Program programId) {
     }
 
-    public RachioId.Webhook getId() {
-        return id;
-    }
-
-    public static RachioApiWebhook EMPTY = new RachioApiWebhook();
+    public static final RachioApiWebhook EMPTY = new RachioApiWebhook(null, null, null, null, List.of());
 }

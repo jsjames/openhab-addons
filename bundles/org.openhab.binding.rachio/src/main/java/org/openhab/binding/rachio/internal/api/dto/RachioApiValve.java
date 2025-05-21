@@ -16,7 +16,6 @@ package org.openhab.binding.rachio.internal.api.dto;
 import java.time.Instant;
 
 import org.openhab.binding.rachio.internal.api.RachioId;
-import org.openhab.binding.rachio.utils.Id;
 
 import com.google.gson.annotations.SerializedName;
 
@@ -25,54 +24,49 @@ import com.google.gson.annotations.SerializedName;
  *
  * @author Jeff James - Initial contribution
  */
-public class RachioApiValve implements Id<RachioId.Valve> {
-    public RachioId.Valve id;
-    public String name;
-    public String connectionId;
-    public Photo photo;
-    public State state;
-    public String color;
-    public boolean detectFlow;
-    public Instant created;
-    public Instant updated;
-
-    public static class Photo {
-        public String id;
-        @SerializedName("default")
-        public boolean defaultPhoto;
+public record RachioApiValve( //
+        RachioId.Valve id, //
+        String name, //
+        String connectionId, //
+        Photo photo, //
+        State state, //
+        String color, //
+        boolean detectFlow, //
+        Instant created, //
+        Instant updated) {
+    public static record Photo( //
+            String id, //
+            @SerializedName("default") boolean defaultPhoto) {
     }
 
-    public static class State {
-        public ReportedState reportedState;
-        public DesiredState desiredState;
-        public boolean matches;
+    public static record State( //
+            ReportedState reportedState, //
+            DesiredState desiredState, //
+            boolean matches //
+    ) {
     }
 
-    public static class ReportedState {
-        public boolean connected;
-        public long defaultRuntimeSeconds;
-        public LastWateringAction lastWateringAction;
-        public Instant lastSeen;
-        public String batteryStatus;
-        public String firmwareVersion;
-        public String calendarHash;
+    public static record ReportedState( //
+            boolean connected, //
+            long defaultRuntimeSeconds, //
+            LastWateringAction lastWateringAction, //
+            Instant lastSeen, //
+            String batteryStatus, //
+            String firmwareVersion, //
+            String calendarHash) {
     }
 
-    public static class DesiredState {
-        public long deafultRuntimeSeconds;
-        public String calendarHash;
+    public static record DesiredState( //
+            long deafultRuntimeSeconds, //
+            String calendarHash) {
     }
 
-    public static class LastWateringAction {
-        public Instant start;
-        public long durationSeconds;
-        public String reason;
+    public static record LastWateringAction( //
+            Instant start, //
+            long durationSeconds, //
+            String reason) {
     }
 
-    @Override
-    public RachioId.Valve getId() {
-        return id;
-    }
-
-    public static final RachioApiValve EMPTY = new RachioApiValve();
+    public static final RachioApiValve EMPTY = new RachioApiValve(null, null, null, null, null, null, false, null,
+            null);
 }

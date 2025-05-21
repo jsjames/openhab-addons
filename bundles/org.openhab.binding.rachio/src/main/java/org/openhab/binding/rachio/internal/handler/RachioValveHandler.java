@@ -13,13 +13,12 @@
 package org.openhab.binding.rachio.internal.handler;
 
 import static org.openhab.binding.rachio.internal.RachioBindingConstants.*;
-import static org.openhab.binding.rachio.internal.RachioUtils.*;
+import static org.openhab.binding.rachio.internal.RachioUtils.isUpdateRequired;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
@@ -70,17 +69,11 @@ public class RachioValveHandler extends AbstractRachioThingHandler<RachioBaseSta
 
     @Override
     public void initialize() {
-        if (id.toString().isEmpty()) {
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, "@text/valve-configuration-issue");
-        }
-        updateStatus(ThingStatus.UNKNOWN);
-        // only goOnline if bridge is ONLINE, otherwise wait for bridgeStatusChange
-        if (Objects.requireNonNull(getBridge()).getStatus() == ThingStatus.ONLINE) {
-            scheduler.execute(this::goOnline);
-        }
+        super.initialize();
+        scheduler.execute(this::goOnline);
     }
 
-    public void goOnline() {
+    public synchronized void goOnline() {
         if (getThing().getStatus() == ThingStatus.ONLINE || !checkBridgeStatus()) {
             return;
         }
@@ -138,7 +131,7 @@ public class RachioValveHandler extends AbstractRachioThingHandler<RachioBaseSta
                 case CHANNEL_VALVE_RUN:
                     if (command == OnOffType.ON) {
                         runTime = getDefaultRunTime();
-                        logger.debug("Starting Valve {} for {} min", rachioApiValve.name, runTime);
+                        logger.debug("Starting Valve {} for {} min", rachioApiValve.name(), runTime);
                         api.putValveStartWatering(id, runTime);
                         updateValveRunning(Instant.now(), runTime);
                     } else {
@@ -151,7 +144,7 @@ public class RachioValveHandler extends AbstractRachioThingHandler<RachioBaseSta
                     if (runTime > 0) {
                         api.putValveStartWatering(id, runTime);
                         updateValveRunning(Instant.now(), runTime);
-                        logger.debug("Valve {} will start for {} min", rachioApiValve.name, runTime);
+                        logger.debug("Valve {} will start for {} min", rachioApiValve.name(), runTime);
                     }
                     break;
                 case CHANNEL_VALVE_DEFAULT_RUN_TIME:
@@ -175,15 +168,15 @@ public class RachioValveHandler extends AbstractRachioThingHandler<RachioBaseSta
             return;
         }
 
-        if (!rachioApiValve.getId().equals(id)) {
+        if (!rachioApiValve.id().equals(id)) {
             logger.error("Valve ID does not match configuration");
             return;
         }
 
-        ThingStatus valveStatus = rachioApiValve.state.reportedState.connected ? ThingStatus.ONLINE
-                : ThingStatus.OFFLINE;
+        ThingStatus valveStatus = (rachioApiValve.state() != null && rachioApiValve.state().reportedState() != null
+                && rachioApiValve.state().reportedState().connected()) ? ThingStatus.ONLINE : ThingStatus.OFFLINE;
         ThingStatus thingStatus = getThing().getStatus();
-        if (thingStatus == ThingStatus.OFFLINE & valveStatus == ThingStatus.ONLINE) {
+        if (thingStatus == ThingStatus.OFFLINE && valveStatus == ThingStatus.ONLINE) {
             goOnline();
             return;
         } else if (thingStatus == ThingStatus.ONLINE && valveStatus == ThingStatus.OFFLINE) {
@@ -195,7 +188,10 @@ public class RachioValveHandler extends AbstractRachioThingHandler<RachioBaseSta
     }
 
     private long getDefaultRunTime() {
-        return rachioApiValve.state.reportedState.defaultRuntimeSeconds;
+        if (rachioApiValve.state() != null && rachioApiValve.state().reportedState() != null) {
+            return rachioApiValve.state().reportedState().defaultRuntimeSeconds();
+        }
+        return 0;
     }
 
     public boolean webhookEvent(RachioApiEvent event) {
@@ -209,17 +205,21 @@ public class RachioValveHandler extends AbstractRachioThingHandler<RachioBaseSta
         } else if (rachioApiValve == RachioApiValve.EMPTY) {
             forceUpdate = true;
         } else if (newRachioApiValve == null) { // use stored state
-            newRachioApiValve = Objects.requireNonNull(rachioApiValve);
-            forceUpdate = true;
+            newRachioApiValve = rachioApiValve;
         }
-        if (isUpdateRequired(CHANNEL_VALVE_NAME, forceUpdate, updateChannel, rachioApiValve.name,
-                Objects.requireNonNullElse(newRachioApiValve.name, ""))) {
-            updateState(CHANNEL_VALVE_NAME, new StringType(newRachioApiValve.name));
+
+        String oldName = rachioApiValve.name();
+        String newName = (newRachioApiValve != null && newRachioApiValve.name() != null) ? newRachioApiValve.name()
+                : "";
+        if (isUpdateRequired(CHANNEL_VALVE_NAME, forceUpdate, updateChannel, oldName, newName)) {
+            updateState(CHANNEL_VALVE_NAME, new StringType(newName));
         }
-        if (isUpdateRequired(CHANNEL_VALVE_IMAGEURL, forceUpdate, updateChannel,
-                (rachioApiValve.photo != null) ? rachioApiValve.photo.id : null, newRachioApiValve.photo.id)
+
+        String oldPhotoId = (rachioApiValve.photo() != null) ? rachioApiValve.photo().id() : null;
+        String newPhotoId = (newRachioApiValve.photo() != null) ? newRachioApiValve.photo().id() : null;
+        if (isUpdateRequired(CHANNEL_VALVE_IMAGEURL, forceUpdate, updateChannel, oldPhotoId, newPhotoId)
                 || CHANNEL_VALVE_IMAGE.equals(updateChannel)) {
-            String imageUrl = RachioApi.API_PHOTO_BASE + newRachioApiValve.photo.id;
+            String imageUrl = RachioApi.API_PHOTO_BASE + newPhotoId;
             updateState(CHANNEL_VALVE_IMAGEURL, new StringType(imageUrl));
             if (isLinked(CHANNEL_VALVE_IMAGE)) {
                 RawType imageRawType = api.getImageFromURL(imageUrl);
@@ -228,43 +228,52 @@ public class RachioValveHandler extends AbstractRachioThingHandler<RachioBaseSta
                 }
             }
         }
-        final RachioApiValve localNewRachioApiValve = newRachioApiValve; // require final for reference in lambda
-                                                                         // function
-        RachioApiValve.ReportedState currentReportedState = safeGet(() -> rachioApiValve.state.reportedState);
-        RachioApiValve.ReportedState newReportedState = safeGet(() -> localNewRachioApiValve.state.reportedState);
-        if (isUpdateRequired(CHANNEL_VALVE_LOW_BATTERY, forceUpdate, updateChannel,
-                safeGet(() -> currentReportedState.batteryStatus), safeGet(() -> newReportedState.batteryStatus))) {
-            updateState(CHANNEL_VALVE_LOW_BATTERY,
-                    OnOffType.from(!"GOOD".equals(newRachioApiValve.state.reportedState.batteryStatus)));
+
+        RachioApiValve.ReportedState currentReportedState = (rachioApiValve.state() != null)
+                ? rachioApiValve.state().reportedState()
+                : null;
+        RachioApiValve.ReportedState newReportedState = (newRachioApiValve.state() != null)
+                ? newRachioApiValve.state().reportedState()
+                : null;
+
+        String oldBatteryStatus = (currentReportedState != null) ? currentReportedState.batteryStatus() : null;
+        String newBatteryStatus = (newReportedState != null) ? newReportedState.batteryStatus() : null;
+        if (isUpdateRequired(CHANNEL_VALVE_LOW_BATTERY, forceUpdate, updateChannel, oldBatteryStatus,
+                newBatteryStatus)) {
+            updateState(CHANNEL_VALVE_LOW_BATTERY, OnOffType.from(!"GOOD".equals(newBatteryStatus)));
         }
-        if (isUpdateRequired(CHANNEL_VALVE_DEFAULT_RUN_TIME, forceUpdate, updateChannel,
-                (currentReportedState != null) ? currentReportedState.defaultRuntimeSeconds : null,
-                newRachioApiValve.state.reportedState.defaultRuntimeSeconds)) {
+
+        Long oldDefaultRuntime = (currentReportedState != null) ? currentReportedState.defaultRuntimeSeconds() : null;
+        Long newDefaultRuntime = (newReportedState != null) ? newReportedState.defaultRuntimeSeconds() : null;
+        if (isUpdateRequired(CHANNEL_VALVE_DEFAULT_RUN_TIME, forceUpdate, updateChannel, oldDefaultRuntime,
+                newDefaultRuntime)) {
             updateState(CHANNEL_VALVE_DEFAULT_RUN_TIME,
-                    new QuantityType<>(newRachioApiValve.state.reportedState.defaultRuntimeSeconds, Units.SECOND));
+                    new QuantityType<>(newDefaultRuntime != null ? newDefaultRuntime : 0, Units.SECOND));
         }
-        RachioApiValve.LastWateringAction lastWateringAction = safeGet(() -> newReportedState.lastWateringAction);
+
+        RachioApiValve.LastWateringAction lastWateringAction = (newReportedState != null)
+                ? newReportedState.lastWateringAction()
+                : null;
         if (lastWateringAction == null) {
             updateValveRunning(Instant.MIN, 0);
         } else {
-            updateValveRunning(lastWateringAction.start, lastWateringAction.durationSeconds);
+            updateValveRunning(lastWateringAction.start(), lastWateringAction.durationSeconds());
         }
-
-        // TODO updateChannel(CHANNEL_LAST_EVENT, new StringType(z.getEvent()));
-        // DateTimeType ts = z.getEventTime();
-        // updateChannel(RachioBindingConstants.CHANNEL_LAST_EVENTTS, ts != null ? ts : UnDefType.UNDEF);
-
         rachioApiValve = newRachioApiValve;
     }
 
     private void updateProperties() {
         Map<String, String> properties = new HashMap<>();
         properties.put(Thing.PROPERTY_VENDOR, RachioBindingConstants.BINDING_VENDOR);
-        properties.put(PROPERTY_NAME, rachioApiValve.name);
-        properties.put(Thing.PROPERTY_SERIAL_NUMBER,
-                rachioApiValve.connectionId.substring(rachioApiValve.connectionId.indexOf("-") + 1));
-        properties.put(PROPERTY_VALVE_COLOR, rachioApiValve.color);
-        properties.put(PROPERTY_VALVE_FW, rachioApiValve.state.reportedState.firmwareVersion);
+        properties.put(PROPERTY_NAME, rachioApiValve.name());
+        String connectionId = rachioApiValve.connectionId();
+        if (connectionId != null && connectionId.contains("-")) {
+            properties.put(Thing.PROPERTY_SERIAL_NUMBER, connectionId.substring(connectionId.indexOf("-") + 1));
+        }
+        properties.put(PROPERTY_VALVE_COLOR, rachioApiValve.color());
+        if (rachioApiValve.state() != null && rachioApiValve.state().reportedState() != null) {
+            properties.put(PROPERTY_VALVE_FW, rachioApiValve.state().reportedState().firmwareVersion());
+        }
         updateProperties(properties);
     }
 }

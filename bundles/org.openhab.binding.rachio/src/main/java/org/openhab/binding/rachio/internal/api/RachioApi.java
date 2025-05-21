@@ -176,17 +176,15 @@ public class RachioApi {
                     new RachioId.RachioIdDeserializer<RachioId.Program>(RachioId.Program.class)) //
             .registerTypeAdapter(new TypeToken<Map<RachioId.Device, RachioApiDevice>>() {
             }.getType(),
-                    new JsonArrayToMapSerializer<RachioId.Device, RachioApiDevice>(v -> v.getId(),
-                            RachioApiDevice.class)) //
+                    new JsonArrayToMapSerializer<RachioId.Device, RachioApiDevice>(v -> v.id(), RachioApiDevice.class)) //
             .registerTypeAdapter(new TypeToken<Map<RachioId.Zone, RachioApiZone>>() {
-            }.getType(),
-                    new JsonArrayToMapSerializer<RachioId.Zone, RachioApiZone>(v -> v.getId(), RachioApiZone.class)) //
+            }.getType(), new JsonArrayToMapSerializer<RachioId.Zone, RachioApiZone>(v -> v.id(), RachioApiZone.class)) //
             .registerTypeAdapter(new TypeToken<Map<RachioId.Valve, RachioApiValve>>() {
             }.getType(),
-                    new JsonArrayToMapSerializer<RachioId.Valve, RachioApiValve>(v -> v.getId(), RachioApiValve.class)) //
+                    new JsonArrayToMapSerializer<RachioId.Valve, RachioApiValve>(v -> v.id(), RachioApiValve.class)) //
             .registerTypeAdapter(new TypeToken<Map<RachioId.BaseStation, RachioApiBaseStation>>() {
             }.getType(),
-                    new JsonArrayToMapSerializer<RachioId.BaseStation, RachioApiBaseStation>(v -> v.getId(),
+                    new JsonArrayToMapSerializer<RachioId.BaseStation, RachioApiBaseStation>(v -> v.id(),
                             RachioApiBaseStation.class)) //
             .create();
     private HttpClient httpClient;
@@ -221,7 +219,7 @@ public class RachioApi {
 
     public RachioApiPerson getPerson(RachioId.Person personId) throws InterruptedException, TimeoutException,
             ExecutionException, RachioApiException, RateLimitThrottleException {
-        String url = String.format(APIURL_GET_PERSON, personId.id());
+        String url = String.format(APIURL_GET_PERSON, personId.idString());
         Request request = httpClient.newRequest(url);
         ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.LOW);
 
@@ -234,7 +232,7 @@ public class RachioApi {
 
     public RachioApiDevice getDevice(RachioId.Device deviceId) throws InterruptedException, TimeoutException,
             ExecutionException, RachioApiException, RateLimitThrottleException {
-        String url = String.format(APIURL_GET_DEVICE, deviceId.id());
+        String url = String.format(APIURL_GET_DEVICE, deviceId.idString());
         Request request = httpClient.newRequest(url);
         ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.LOW);
 
@@ -243,7 +241,7 @@ public class RachioApi {
 
     public RachioApiCurrentSchedule getDeviceCurrentSchedule(RachioId.Device deviceId) throws InterruptedException,
             TimeoutException, ExecutionException, RachioApiException, RateLimitThrottleException {
-        String url = String.format(APIURL_GET_DEVICE_CURRENT_SCHEDULE, deviceId.id());
+        String url = String.format(APIURL_GET_DEVICE_CURRENT_SCHEDULE, deviceId.idString());
         Request request = httpClient.newRequest(url).method(HttpMethod.GET);
         ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.MED);
 
@@ -253,8 +251,8 @@ public class RachioApi {
     public List<RachioApiEvent> getDeviceEvents(RachioId.Device deviceId, Instant startTime, Instant endTime)
             throws InterruptedException, TimeoutException, ExecutionException, RachioApiException,
             RateLimitThrottleException {
-        logger.trace("getDeviceEvent for device '{}'", deviceId.id());
-        String url = String.format(APIURL_GET_DEVICE_EVENT, deviceId.id());
+        logger.trace("getDeviceEvent for device '{}'", deviceId.idString());
+        String url = String.format(APIURL_GET_DEVICE_EVENT, deviceId.idString());
         Request request = httpClient.newRequest(url).method(HttpMethod.GET)
                 .param("startTime", String.valueOf(startTime.toEpochMilli()))
                 .param("endTime", String.valueOf(endTime.toEpochMilli()));
@@ -266,17 +264,19 @@ public class RachioApi {
 
     public void putStopWatering(RachioId.Device deviceId) throws RachioApiException, InterruptedException,
             TimeoutException, ExecutionException, RateLimitThrottleException {
-        logger.debug("Stop watering for device '{}'", deviceId.id());
-        Request request = httpClient.newRequest(APIURL_PUT_DEVICE_STOP).method(HttpMethod.PUT).param("id",
-                deviceId.id());
+        logger.debug("Stop watering for device '{}'", deviceId.idString());
+        JsonObject bodyParamJson = new JsonObject();
+        bodyParamJson.addProperty("id", deviceId.idString());
+        Request request = httpClient.newRequest(APIURL_PUT_DEVICE_STOP).method(HttpMethod.PUT).content(
+                new StringContentProvider(CONTENT_TYPE_JSON, bodyParamJson.toString(), StandardCharsets.UTF_8));
         sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
     }
 
     public void putDeviceRainDelay(RachioId.Device deviceId, long duration) throws RachioApiException,
             InterruptedException, TimeoutException, ExecutionException, RateLimitThrottleException {
-        logger.debug("Start dain relay for device '{}'.", deviceId.id());
+        logger.debug("Start dain relay for device '{}'.", deviceId.idString());
         JsonObject bodyParamJson = new JsonObject();
-        bodyParamJson.addProperty("id", deviceId.id());
+        bodyParamJson.addProperty("id", deviceId.idString());
         bodyParamJson.addProperty("duration", duration);
         Request request = httpClient.newRequest(APIURL_PUT_DEVICE_RAIN_DELAY).method(HttpMethod.PUT).content(
                 new StringContentProvider(CONTENT_TYPE_JSON, bodyParamJson.toString(), StandardCharsets.UTF_8));
@@ -285,10 +285,10 @@ public class RachioApi {
 
     public void enableDevice(RachioId.Device deviceId, boolean enable) throws RachioApiException, InterruptedException,
             TimeoutException, ExecutionException, RateLimitThrottleException {
-        logger.debug("enable device '{}' - {}.", deviceId.id(), enable);
+        logger.debug("enable device '{}' - {}.", deviceId.idString(), enable);
         String url = (enable) ? APIURL_PUT_DEVICE_ON : APIURL_PUT_DEVICE_OFF;
         JsonObject bodyParamJson = new JsonObject();
-        bodyParamJson.addProperty("id", deviceId.id());
+        bodyParamJson.addProperty("id", deviceId.idString());
         Request request = httpClient.newRequest(url).method(HttpMethod.PUT).content(
                 new StringContentProvider(CONTENT_TYPE_JSON, bodyParamJson.toString(), StandardCharsets.UTF_8));
         sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
@@ -296,10 +296,10 @@ public class RachioApi {
 
     public void pauseZoneRun(RachioId.Device deviceId, long duration, boolean pause) throws InterruptedException,
             TimeoutException, ExecutionException, RachioApiException, RateLimitThrottleException {
-        logger.debug("Pause device '{}' for {} sec - {}.", deviceId.id(), duration, pause);
+        logger.debug("Pause device '{}' for {} sec - {}.", deviceId.idString(), duration, pause);
         String url = (pause) ? APIURL_PUT_DEVICE_PAUSE_RUN : APIURL_PUT_DEVICE_RESUME_RUN;
         JsonObject bodyParamJson = new JsonObject();
-        bodyParamJson.addProperty("id", deviceId.id());
+        bodyParamJson.addProperty("id", deviceId.idString());
         bodyParamJson.addProperty("duration", String.valueOf(duration));
         Request request = httpClient.newRequest(url).method(HttpMethod.PUT).content(
                 new StringContentProvider(CONTENT_TYPE_JSON, bodyParamJson.toString(), StandardCharsets.UTF_8));
@@ -313,7 +313,7 @@ public class RachioApi {
     public RachioApiZone getZone(RachioId.Zone zoneId) throws InterruptedException, TimeoutException,
             ExecutionException, RachioApiException, RateLimitThrottleException {
 
-        String url = String.format(APIURL_GET_ZONE, zoneId.id());
+        String url = String.format(APIURL_GET_ZONE, zoneId.idString());
         Request request = httpClient.newRequest(url);
         ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.LOW);
 
@@ -322,13 +322,13 @@ public class RachioApi {
 
     public void putZoneStartWatering(RachioId.Zone zoneId, int duration) throws RachioApiException,
             InterruptedException, TimeoutException, ExecutionException, RateLimitThrottleException {
-        logger.debug("Start watering Zone '{}' for {} sec.", zoneId.id(), duration);
+        logger.debug("Start watering Zone '{}' for {} sec.", zoneId.idString(), duration);
 
         JsonObject bodyParamJson = new JsonObject();
-        bodyParamJson.addProperty("id", zoneId.id());
+        bodyParamJson.addProperty("id", zoneId.idString());
         bodyParamJson.addProperty("duration", duration);
         Request request = httpClient.newRequest(APIURL_PUT_ZONE_START).method(HttpMethod.PUT)
-                .param("id", zoneId.toString()).content(
+                .param("id", zoneId.idString()).content(
                         new StringContentProvider(CONTENT_TYPE_JSON, bodyParamJson.toString(), StandardCharsets.UTF_8));
         sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
     }
@@ -349,23 +349,23 @@ public class RachioApi {
 
     public void putZoneMoistureLevel(RachioId.Zone zoneId, int level) throws InterruptedException, TimeoutException,
             ExecutionException, RachioApiException, RateLimitThrottleException {
-        logger.debug("Set moisture level zone '{}' to {}.", zoneId.id(), level);
+        logger.debug("Set moisture level zone '{}' to {}.", zoneId.idString(), level);
         Request request = httpClient.newRequest(APIURL_PUT_ZONE_MOISTURE_LEVEL).method(HttpMethod.PUT)
-                .param("id", zoneId.id()).param("level", String.valueOf(level));
+                .param("id", zoneId.idString()).param("level", String.valueOf(level));
         sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
     }
 
     public void putZoneMoisturePercent(RachioId.Zone zoneId, int percent) throws InterruptedException, TimeoutException,
             ExecutionException, RachioApiException, RateLimitThrottleException {
-        logger.debug("Set moisture level zone '{}' to {}%.", zoneId.id(), percent);
+        logger.debug("Set moisture level zone '{}' to {}%.", zoneId.idString(), percent);
         Request request = httpClient.newRequest(APIURL_PUT_ZONE_MOISTURE_PERCENT).method(HttpMethod.PUT)
-                .param("id", zoneId.id()).param("percent", String.valueOf(percent));
+                .param("id", zoneId.idString()).param("percent", String.valueOf(percent));
         sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
     }
 
     public void putZoneEnable(RachioId.Zone zoneId) throws InterruptedException, TimeoutException, ExecutionException,
             RachioApiException, RateLimitThrottleException {
-        String jsonBody = "{\"id\":\"" + zoneId.id() + "\"}";
+        String jsonBody = "{\"id\":\"" + zoneId.idString() + "\"}";
         Request request = httpClient.newRequest(APIURL_PUT_ZONE_ENABLE).method(HttpMethod.PUT)
                 .content(new StringContentProvider(CONTENT_TYPE_JSON, jsonBody, StandardCharsets.UTF_8));
         sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
@@ -373,7 +373,7 @@ public class RachioApi {
 
     public void putZoneDisable(RachioId.Zone zoneId) throws InterruptedException, TimeoutException, ExecutionException,
             RachioApiException, RateLimitThrottleException {
-        String jsonBody = "{\"id\":\"" + zoneId.id() + "\"}";
+        String jsonBody = "{\"id\":\"" + zoneId.idString() + "\"}";
         Request request = httpClient.newRequest(APIURL_PUT_ZONE_DISABLE).method(HttpMethod.PUT)
                 .content(new StringContentProvider(CONTENT_TYPE_JSON, jsonBody, StandardCharsets.UTF_8));
         sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
@@ -404,7 +404,7 @@ public class RachioApi {
 
     public void putScheduleSkipForward(RachioId.Device deviceId) throws InterruptedException, TimeoutException,
             ExecutionException, RachioApiException, RateLimitThrottleException {
-        String jsonBody = "{\"id\":\"" + deviceId.id() + "\"}";
+        String jsonBody = "{\"id\":\"" + deviceId.idString() + "\"}";
         Request request = httpClient.newRequest(APIURL_PUT_SCHEDULE_SKIP_FORWARD).method(HttpMethod.PUT)
                 .content(new StringContentProvider(CONTENT_TYPE_JSON, jsonBody, StandardCharsets.UTF_8));
         sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
@@ -418,20 +418,18 @@ public class RachioApi {
             List<String> eventTypes) throws JsonSyntaxException, RachioApiException, InterruptedException,
             TimeoutException, ExecutionException, RateLimitThrottleException {
 
-        RachioApiWebhook webhook = new RachioApiWebhook();
+        RachioApiWebhook.RachioApiWebhookResourceID resourceId = new RachioApiWebhook.RachioApiWebhookResourceID(
+                (id instanceof RachioId.Valve valveId) ? valveId : null,
+                (id instanceof RachioId.Device deviceId) ? deviceId : null,
+                (id instanceof RachioId.Program programId) ? programId : null);
 
-        webhook.url = callbackUrl;
-        webhook.externalId = externalId;
-        webhook.eventTypes = eventTypes;
-        if (id instanceof RachioId.Device deviceId) {
-            webhook.resourceId.irrigationControllerId = deviceId;
-        } else if (id instanceof RachioId.Program programId) {
-            webhook.resourceId.programId = programId;
-        } else if (id instanceof RachioId.Valve valveId) {
-            webhook.resourceId.valveId = valveId;
-        } else {
+        if (resourceId.valveId() == null && resourceId.irrigationControllerId() == null
+                && resourceId.programId() == null) {
             throw new InvalidParameterException("Invalid RachioID type: " + id.toString());
         }
+
+        RachioApiWebhook webhook = new RachioApiWebhook(null, //
+                externalId, resourceId, callbackUrl, eventTypes);
 
         Request request = httpClient.newRequest(APIURL_POST_CREATE_WEBHOOK).method(HttpMethod.POST)
                 .content(new StringContentProvider(CONTENT_TYPE_JSON, gson.toJson(webhook)), CONTENT_TYPE_JSON);
@@ -466,7 +464,7 @@ public class RachioApi {
 
     public void deleteWebhook(RachioId.Webhook webhookId) throws InterruptedException, TimeoutException,
             ExecutionException, RachioApiException, RateLimitThrottleException {
-        String url = String.format(APIURL_DELETE_WEBHOOK, webhookId.id());
+        String url = String.format(APIURL_DELETE_WEBHOOK, webhookId.idString());
         Request request = httpClient.newRequest(url).method(HttpMethod.DELETE);
         sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
     }
@@ -484,7 +482,7 @@ public class RachioApi {
             throw new IllegalArgumentException("Unsupported RachioId type: " + rachioId.getClass());
         }
 
-        url = String.format(url, rachioId.id());
+        url = String.format(url, rachioId.idString());
         Request request = httpClient.newRequest(url).method(HttpMethod.DELETE);
         sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
     }
@@ -527,7 +525,7 @@ public class RachioApi {
 
     public RachioApiBaseStation getBaseStation(RachioId.BaseStation rachioIdBaseStation) throws InterruptedException,
             TimeoutException, ExecutionException, RachioApiException, RateLimitThrottleException {
-        String url = String.format(APIURL_GET_BASE_STATION, rachioIdBaseStation.id());
+        String url = String.format(APIURL_GET_BASE_STATION, rachioIdBaseStation.idString());
         Request request = httpClient.newRequest(url).method(HttpMethod.GET);
         ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
 
@@ -540,7 +538,7 @@ public class RachioApi {
     public Map<RachioId.BaseStation, RachioApiBaseStation> getBaseStations(RachioId.Person personId)
             throws InterruptedException, TimeoutException, ExecutionException, RachioApiException,
             RateLimitThrottleException {
-        String url = String.format(APIURL_GET_BASE_STATIONS, personId.id());
+        String url = String.format(APIURL_GET_BASE_STATIONS, personId.idString());
         Request request = httpClient.newRequest(url).method(HttpMethod.GET);
         ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
 
@@ -554,7 +552,7 @@ public class RachioApi {
 
     public RachioApiValve getValve(RachioId.Valve valveId) throws InterruptedException, TimeoutException,
             ExecutionException, RachioApiException, RateLimitThrottleException {
-        String url = String.format(APIURL_GET_VALVE, valveId.id());
+        String url = String.format(APIURL_GET_VALVE, valveId.idString());
         Request request = httpClient.newRequest(url).method(HttpMethod.GET);
         ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
 
@@ -566,7 +564,7 @@ public class RachioApi {
     public Map<RachioId.Valve, RachioApiValve> getValves(RachioId.BaseStation baseStationId)
             throws InterruptedException, TimeoutException, ExecutionException, RachioApiException,
             RateLimitThrottleException {
-        String url = String.format(APIURL_GET_VALVES, baseStationId.id());
+        String url = String.format(APIURL_GET_VALVES, baseStationId.idString());
         Request request = httpClient.newRequest(url).method(HttpMethod.GET);
         ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
 
@@ -580,7 +578,7 @@ public class RachioApi {
     public void putValveStartWatering(RachioId.Valve valveId, long durationSeconds) throws InterruptedException,
             TimeoutException, ExecutionException, RachioApiException, RateLimitThrottleException {
         JsonObject bodyParamJson = new JsonObject();
-        bodyParamJson.addProperty("valveId", valveId.id());
+        bodyParamJson.addProperty("valveId", valveId.idString());
         bodyParamJson.addProperty("durationSeconds", (int) durationSeconds);
         Request request = httpClient.newRequest(APIURL_PUT_VALVE_START_WATERING).method(HttpMethod.PUT).content(
                 new StringContentProvider(CONTENT_TYPE_JSON, bodyParamJson.toString(), StandardCharsets.UTF_8));
@@ -590,7 +588,7 @@ public class RachioApi {
     public void putValveStopWatering(RachioId.Valve valveId) throws InterruptedException, TimeoutException,
             ExecutionException, RachioApiException, RateLimitThrottleException {
         JsonObject bodyParamJson = new JsonObject();
-        bodyParamJson.addProperty("valveId", valveId.id());
+        bodyParamJson.addProperty("valveId", valveId.idString());
         Request request = httpClient.newRequest(APIURL_PUT_VALVE_STOP_WATERING).method(HttpMethod.PUT).content(
                 new StringContentProvider(CONTENT_TYPE_JSON, bodyParamJson.toString(), StandardCharsets.UTF_8));
         sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
@@ -599,7 +597,7 @@ public class RachioApi {
     public void putValveDefaultRunTime(RachioId.Valve valveId, long durationSeconds) throws InterruptedException,
             TimeoutException, ExecutionException, RachioApiException, RateLimitThrottleException {
         JsonObject bodyParamJson = new JsonObject();
-        bodyParamJson.addProperty("valveId", valveId.id());
+        bodyParamJson.addProperty("valveId", valveId.idString());
         bodyParamJson.addProperty("defaultRuntimeSeconds", durationSeconds);
         Request request = httpClient.newRequest(APIURL_PUT_VALVE_DEFAULT_RUNTIME).method(HttpMethod.PUT).content(
                 new StringContentProvider(CONTENT_TYPE_JSON, bodyParamJson.toString(), StandardCharsets.UTF_8));

@@ -19,9 +19,7 @@ import com.google.gson.annotations.SerializedName;
  *
  * @author Jeff James - Initial contribution
  */
-public class RachioApiEventType {
-    @SerializedName("resource_id")
-    public String resourceType;
-    @SerializedName("event_types")
-    public String eventType;
+public record RachioApiEventType( //
+        @SerializedName("resource_id") String resourceType, //
+        @SerializedName("event_types") String eventType) {
 }

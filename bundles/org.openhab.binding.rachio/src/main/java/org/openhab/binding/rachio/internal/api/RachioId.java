@@ -30,36 +30,36 @@ import com.google.gson.JsonParseException;
 @NonNullByDefault
 public class RachioId {
     public interface Id {
-        String id();
+        String idString();
     }
 
-    public record Device(String id) implements Id {
+    public record Device(String idString) implements Id {
     }
 
-    public record Zone(String id) implements Id {
+    public record Zone(String idString) implements Id {
     }
 
-    public record Schedule(String id) implements Id {
+    public record Schedule(String idString) implements Id {
     }
 
-    public record Event(String id) implements Id {
+    public record Event(String idString) implements Id {
     }
 
-    public record Person(String id) implements Id {
+    public record Person(String idString) implements Id {
         static public final Person EMPTY = new Person("");
     }
 
-    public record Webhook(String id) implements Id {
+    public record Webhook(String idString) implements Id {
         static public final Webhook EMPTY = new Webhook("");
     }
 
-    public record Program(String id) implements Id {
+    public record Program(String idString) implements Id {
     }
 
-    public record Valve(String id) implements Id {
+    public record Valve(String idString) implements Id {
     }
 
-    public record BaseStation(String id) implements Id {
+    public record BaseStation(String idString) implements Id {
     }
 
     public static class RachioIdDeserializer<T> implements JsonDeserializer<T> {

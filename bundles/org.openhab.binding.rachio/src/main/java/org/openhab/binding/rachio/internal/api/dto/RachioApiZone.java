@@ -15,71 +15,62 @@ package org.openhab.binding.rachio.internal.api.dto;
 import java.util.Date;
 
 import org.openhab.binding.rachio.internal.api.RachioId;
-import org.openhab.binding.rachio.utils.Id;
 
 /**
  * {@link RachioApiZone} maps the API results to a Java object (using GSon).
  *
  * @author Markus Michels - Initial contribution
  */
-public class RachioApiZone implements Id<RachioId.Zone> {
-    public RachioId.Zone id;
-    public String name;
-    public int zoneNumber;
-    public boolean enabled;
-    public double availableWater;
-    public double rootZoneDepth;
-    public double managementAllowedDepletion;
-    public double efficiency;
-    public int yardAreaSquareFeet;
-    public double irrigationAmount;
-    public double depthOfWater;
-    public int runtime;
-
-    public String imageUrl;
-    public Date lastWateredDate;
-    public long lastWaterDuration;
-    public boolean scheduleDataModified;
-    public int fixedRuntime;
-    public double saturatedDepthOfWater;
-    public int maxRuntime;
-    public int runtimeNoMultiplier;
-    // public HashMap<String, int> wateringAdjustmentRuntimes[];
-
-    public RachioApiZoneCustomNozzle customNozzle;
-    public RachioApiZoneCustomSoil customSoil;
-    public RachioApiZoneCustomSlope customSlope;
-    public RachioApiZoneCustomCrop customCrop;
-    public RachioApiZoneCustomShade customShade;
-
-    public static class RachioApiZoneCustomNozzle {
-        public String name;
-        public Double inchesPerHour;
+public record RachioApiZone( //
+        RachioId.Zone id, //
+        String name, //
+        int zoneNumber, //
+        boolean enabled, //
+        double availableWater, //
+        double rootZoneDepth, //
+        double managementAllowedDepletion, //
+        double efficiency, //
+        int yardAreaSquareFeet, //
+        double irrigationAmount, //
+        double depthOfWater, //
+        int runtime, //
+        String imageUrl, //
+        Date lastWateredDate, //
+        long lastWaterDuration, //
+        boolean scheduleDataModified, //
+        int fixedRuntime, //
+        double saturatedDepthOfWater, //
+        int maxRuntime, //
+        int runtimeNoMultiplier, //
+        RachioApiZone.RachioApiZoneCustomNozzle customNozzle, //
+        RachioApiZone.RachioApiZoneCustomSoil customSoil, //
+        RachioApiZone.RachioApiZoneCustomSlope customSlope, //
+        RachioApiZone.RachioApiZoneCustomCrop customCrop, //
+        RachioApiZone.RachioApiZoneCustomShade customShade) {
+    public static record RachioApiZoneCustomNozzle( //
+            String name, //
+            Double inchesPerHour) {
     }
 
-    public static class RachioApiZoneCustomSoil {
-        public String name;
-        public int sortOrder;
+    public static record RachioApiZoneCustomSoil( //
+            String name, //
+            int sortOrder) {
     }
 
-    public static class RachioApiZoneCustomSlope {
-        public String name;
-        public int sortOrder;
+    public static record RachioApiZoneCustomSlope( //
+            String name, //
+            int sortOrder) {
     }
 
-    public static class RachioApiZoneCustomCrop {
-        public String name;
-        public Double coefficient;
+    public static record RachioApiZoneCustomCrop( //
+            String name, //
+            Double coefficient) {
     }
 
-    public static class RachioApiZoneCustomShade {
-        public String name;
+    public static record RachioApiZoneCustomShade( //
+            String name) {
     }
 
-    public static final RachioApiZone EMPTY = new RachioApiZone();
-
-    @Override
-    public RachioId.Zone getId() {
-        return id;
-    }
+    public static final RachioApiZone EMPTY = new RachioApiZone(null, null, 0, false, 0.0, 0.0, 0.0, 0.0, 0, 0.0, 0.0,
+            0, null, null, 0L, false, 0, 0.0, 0, 0, null, null, null, null, null);
 }

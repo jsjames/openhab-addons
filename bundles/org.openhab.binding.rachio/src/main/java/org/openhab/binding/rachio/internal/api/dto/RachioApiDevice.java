@@ -13,42 +13,38 @@
 
 package org.openhab.binding.rachio.internal.api.dto;
 
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+import org.eclipse.jdt.annotation.NonNull;
 import org.openhab.binding.rachio.internal.api.RachioId;
-import org.openhab.binding.rachio.utils.Id;
 
 /**
  * The {@link RachioApiDevice}
  *
  * @author Jeff James - Initial contribution
  */
-public class RachioApiDevice implements Id<RachioId.Device> {
-    public RachioId.Device id;
-    public Date createDate;
-    public String name;
-    public String status;
-    public String model;
-    public Map<RachioId.Zone, RachioApiZone> zones;
-    public double latitude;
-    public double longitude;
-    public List<RachioApiScheduleRule> scheduleRules;
-    public String serialNumber;
-    public Date rainDelayExpirationDate;
-    public Date rainDelayStartDate;
-    public String macAddress;
-    // webhooks
-    public boolean on;
-    public List<RachioApiScheduleRule> flexScheduleRules;
-    public long utcOffset;
-    public boolean rainSensorTripped;
-
-    @Override
-    public RachioId.Device getId() {
-        return id;
-    }
-
-    public static final RachioApiDevice EMPTY = new RachioApiDevice();
+public record RachioApiDevice( //
+        RachioId.Device id, //
+        Date createDate, //
+        String name, //
+        String status, //
+        String model, //
+        @NonNull Map<RachioId.Zone, RachioApiZone> zones, //
+        double latitude, //
+        double longitude, //
+        List<RachioApiScheduleRule> scheduleRules, //
+        String serialNumber, //
+        Date rainDelayExpirationDate, //
+        Date rainDelayStartDate, //
+        String macAddress, //
+        boolean on, //
+        List<RachioApiScheduleRule> flexScheduleRules, //
+        long utcOffset, //
+        boolean rainSensorTripped) {
+    public static final RachioApiDevice EMPTY = new RachioApiDevice(null, null, null, null, null,
+            Collections.<RachioId.Zone, RachioApiZone> emptyMap(), 0.0, 0.0, null, null, null, null, null, false, null,
+            0L, false);
 }

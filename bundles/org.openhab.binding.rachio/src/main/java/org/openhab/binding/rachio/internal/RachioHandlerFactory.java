@@ -21,7 +21,7 @@ import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.jetty.client.HttpClient;
 import org.openhab.binding.rachio.internal.api.RachioId;
 import org.openhab.binding.rachio.internal.handler.RachioBaseStationHandler;
-import org.openhab.binding.rachio.internal.handler.RachioBridgeHandler;
+import org.openhab.binding.rachio.internal.handler.RachioCloudConnector;
 import org.openhab.binding.rachio.internal.handler.RachioControllerHandler;
 import org.openhab.binding.rachio.internal.handler.RachioValveHandler;
 import org.openhab.binding.rachio.internal.handler.RachioZoneHandler;
@@ -57,7 +57,7 @@ public class RachioHandlerFactory extends BaseThingHandlerFactory {
     private final HttpService httpService;
 
     @Nullable
-    private RachioBridgeHandler rachioBridgeHandler = null;
+    private RachioCloudConnector rachioBridgeHandler = null;
 
     @Activate
     public RachioHandlerFactory(final @Reference HttpClientFactory httpClientFactory,
@@ -80,7 +80,7 @@ public class RachioHandlerFactory extends BaseThingHandlerFactory {
                 return createBridgeHandler((Bridge) thing, httpClientFactory.getCommonHttpClient(), httpService);
             }
 
-            RachioBridgeHandler lRachioBridgeHandler = rachioBridgeHandler;
+            RachioCloudConnector lRachioBridgeHandler = rachioBridgeHandler;
             if (lRachioBridgeHandler == null) {
                 logger.debug("RachioHandlerFactory: Unable to create thing handler - no bridge handler found.");
                 return null;
@@ -107,14 +107,14 @@ public class RachioHandlerFactory extends BaseThingHandlerFactory {
     }
 
     @Nullable
-    private RachioBridgeHandler createBridgeHandler(Bridge bridgeThing, HttpClient httpClient,
+    private RachioCloudConnector createBridgeHandler(Bridge bridgeThing, HttpClient httpClient,
             HttpService httpService) {
         if (rachioBridgeHandler != null) {
             logger.debug("RachioHandlerFactory: Duplicate bridge already exists.");
             return null;
         }
 
-        rachioBridgeHandler = new RachioBridgeHandler(bridgeThing, httpClient, httpService);
+        rachioBridgeHandler = new RachioCloudConnector(bridgeThing, httpClient, httpService);
         return rachioBridgeHandler;
     }
 

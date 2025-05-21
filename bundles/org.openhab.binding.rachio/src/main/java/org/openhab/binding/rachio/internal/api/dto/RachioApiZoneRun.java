@@ -19,14 +19,8 @@ import org.openhab.binding.rachio.internal.api.RachioId;
  *
  * @author Jeff James - Initial contribution
  */
-public class RachioApiZoneRun {
-    public RachioId.Zone id;
-    public int duration;
-    public int sortOrder;
-
-    public RachioApiZoneRun(RachioId.Zone id, int duration, int sortOrder) {
-        this.id = id;
-        this.duration = duration;
-        this.sortOrder = sortOrder;
-    }
+public record RachioApiZoneRun( //
+        RachioId.Zone id, //
+        int duration, //
+        int sortOrder) {
 }

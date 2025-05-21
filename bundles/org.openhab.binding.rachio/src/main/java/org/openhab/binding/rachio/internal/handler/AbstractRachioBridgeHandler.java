@@ -41,16 +41,22 @@ public abstract class AbstractRachioBridgeHandler<BH extends BaseBridgeHandler, 
         this.id = id;
     }
 
-    abstract public void goOnline();
+    public void initialize() {
+        if (id.idString().isEmpty()) {
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, "@text/configuration-issue");
+            return;
+        }
+
+        updateStatus(ThingStatus.UNKNOWN);
+    }
+
+    public abstract void goOnline();
 
     @Override
     public void bridgeStatusChanged(ThingStatusInfo bridgeStatusInfo) {
-        super.bridgeStatusChanged(bridgeStatusInfo);
-        // logger.debug("bridgeStatusChanged: {}", bridgeStatusInfo);
-
         if (bridgeStatusInfo.getStatus() == ThingStatus.ONLINE) {
             goOnline();
-        } else {
+        } else if (bridgeStatusInfo.getStatus() == ThingStatus.OFFLINE) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE);
         }
     }

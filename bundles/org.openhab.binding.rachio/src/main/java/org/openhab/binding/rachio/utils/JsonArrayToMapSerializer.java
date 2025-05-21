@@ -31,7 +31,7 @@ import com.google.gson.JsonParseException;
  * @author Jeff James - Initial contribution
  */
 @NonNullByDefault
-public class JsonArrayToMapSerializer<K, V extends Id<?>> implements JsonDeserializer<Map<K, V>> {
+public class JsonArrayToMapSerializer<K, V> implements JsonDeserializer<Map<K, V>> {
     private final Function<V, K> keyFunc;
     private final Class<V> clazzV;
 
@@ -52,7 +52,7 @@ public class JsonArrayToMapSerializer<K, V extends Id<?>> implements JsonDeseria
         for (JsonElement element : json.getAsJsonArray()) {
             @Nullable
             V v = context.deserialize(element, clazzV);
-            if (v != null && v.getId() != null) {
+            if (v != null) {
                 K k;
                 try {
                     k = keyFunc.apply(v);

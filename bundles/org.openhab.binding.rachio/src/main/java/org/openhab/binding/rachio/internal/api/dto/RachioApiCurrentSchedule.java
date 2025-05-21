@@ -21,20 +21,20 @@ import org.openhab.binding.rachio.internal.api.RachioId;
  *
  * @author Jeff James - Initial contribution
  */
-public class RachioApiCurrentSchedule {
-    public RachioId.Device deviceId;
-    public RachioId.Schedule scheduleId;
-    public String type;
-    public String status;
-    public Date startDate;
-    public int duration;
-    public RachioId.Zone zoneId;
-    public Date zoneStartDate;
-    public int zoneDuration;
-    public int cycleCount;
-    public int totalCyclingCount;
-    public boolean cycling;
-    public int durationNoCycle;
-
-    static final public RachioApiCurrentSchedule EMPTY = new RachioApiCurrentSchedule();
+public record RachioApiCurrentSchedule( //
+        RachioId.Device deviceId, //
+        RachioId.Schedule scheduleId, //
+        String type, //
+        String status, //
+        Date startDate, //
+        int duration, //
+        RachioId.Zone zoneId, //
+        Date zoneStartDate, //
+        int zoneDuration, //
+        int cycleCount, //
+        int totalCyclingCount, //
+        boolean cycling, //
+        int durationNoCycle) {
+    public static final RachioApiCurrentSchedule EMPTY = new RachioApiCurrentSchedule(null, null, null, null, null, 0,
+            null, null, 0, 0, 0, false, 0);
 }

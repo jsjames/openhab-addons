@@ -25,7 +25,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiEvent;
-import org.openhab.binding.rachio.internal.handler.RachioBridgeHandler;
+import org.openhab.binding.rachio.internal.handler.RachioCloudConnector;
 import org.osgi.service.http.HttpService;
 import org.osgi.service.http.NamespaceException;
 import org.slf4j.Logger;
@@ -45,9 +45,9 @@ public class RachioWebhookServlet extends HttpServlet {
     private final Gson gson = new Gson();
 
     private final HttpService httpService;
-    private final RachioBridgeHandler rachioBridgeHandler;
+    private final RachioCloudConnector rachioBridgeHandler;
 
-    public RachioWebhookServlet(HttpService httpService, RachioBridgeHandler rachioBridgeHandler) {
+    public RachioWebhookServlet(HttpService httpService, RachioCloudConnector rachioBridgeHandler) {
         this.httpService = httpService;
         this.rachioBridgeHandler = rachioBridgeHandler;
         try {
@@ -108,8 +108,8 @@ public class RachioWebhookServlet extends HttpServlet {
                 return;
             }
 
-            logger.trace("RachioEvent {}.{} for device '{}': {}", event.category, event.type, event.deviceId,
-                    event.summary);
+            logger.trace("RachioEvent {}.{} for device '{}': {}", event.category(), event.type(), event.deviceId(),
+                    event.summary());
             // TODO
             // event.apiResult.setRateLimit(request.getHeader(RACHIO_JSON_RATE_LIMIT),
             // request.getHeader(RACHIO_JSON_RATE_REMAINING), request.getHeader(RACHIO_JSON_RATE_RESET));

@@ -43,12 +43,17 @@ public abstract class AbstractRachioThingHandler<BH extends BaseBridgeHandler, I
         this.id = id;
     }
 
+    public void initialize() {
+        if (id.idString().isEmpty()) {
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.CONFIGURATION_ERROR, "@text/configuration-issue");
+            return;
+        }
+    }
+
     abstract public void goOnline();
 
     @Override
     public void bridgeStatusChanged(ThingStatusInfo bridgeStatusInfo) {
-        super.bridgeStatusChanged(bridgeStatusInfo);
-
         if (bridgeStatusInfo.getStatus() == ThingStatus.ONLINE) {
             goOnline();
         } else {
