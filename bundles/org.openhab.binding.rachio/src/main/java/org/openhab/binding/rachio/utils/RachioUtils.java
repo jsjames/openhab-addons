@@ -10,8 +10,13 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.openhab.binding.rachio.internal;
+package org.openhab.binding.rachio.utils;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.security.InvalidParameterException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
@@ -33,7 +38,7 @@ import org.openhab.core.types.Command;
 @NonNullByDefault
 public class RachioUtils {
     /**
-     * {@link compareCollections} will compare 2 collections and call the provided consumer methods appropriate
+     * {@link reconcileCollections} will compare 2 collections and call the provided consumer methods appropriate
      * 
      * @param <T> base type of the collections. Both collections must be of (or inherited from) the common type T
      * @param c1 collection 1
@@ -42,7 +47,7 @@ public class RachioUtils {
      * @param c2Exclusive method called for items which are unique to collection 2
      * @param c1c2Inclusive method called for items which are included in both collection 1 & 2
      */
-    public static <T> void compareCollections(Collection<T> c1, Collection<T> c2, Consumer<T> c1Exclusive,
+    public static <T> void reconcileCollections(Collection<T> c1, Collection<T> c2, Consumer<T> c1Exclusive,
             Consumer<T> c2Exclusive, Consumer<T> c1c2Inclusive) {
         Set<T> setC1 = (c1 instanceof Set<T> c1set) ? c1set : new HashSet<>(c1);
         Set<T> setC2 = (c2 instanceof Set<T> c2set) ? c2set : new HashSet<>(c2);
@@ -149,5 +154,47 @@ public class RachioUtils {
     public static <@Nullable T> T safeGet(Supplier<T> supplier, T defaultValue) {
         T value = safeGet(supplier);
         return (value != null) ? value : defaultValue;
+    }
+
+    public static String enocdeUri(String uri) {
+        int startUserInfo = uri.indexOf("//") + 2; // skip the '//' at the start
+        int endUserInfo = uri.lastIndexOf("@");
+
+        if (startUserInfo < 0 || endUserInfo < 0 || startUserInfo >= endUserInfo) {
+            throw new InvalidParameterException("Callback URI missing user info: " + uri);
+        }
+
+        String[] userInfo = uri.substring(startUserInfo, endUserInfo).split(":", 2);
+        if (userInfo.length != 2) {
+            throw new InvalidParameterException("User info must be in the form user:password: " + userInfo);
+        }
+        String encodedUserInfo = URLEncoder.encode(userInfo[0], StandardCharsets.UTF_8) + ":"
+                + URLEncoder.encode(userInfo[1], StandardCharsets.UTF_8);
+        return uri.substring(0, startUserInfo) + encodedUserInfo + uri.substring(endUserInfo);
+    }
+
+    /**
+     * Given a string, return the MD5 hash of the String.
+     *
+     * @param unhashed The string contents to be hashed.
+     * @return MD5 Hashed value of the String. Null if there is a problem hashing the String.
+     */
+    public static String getMD5Hash(String unhashed) {
+        try {
+            byte[] bytesOfMessage = unhashed.getBytes(StandardCharsets.UTF_8);
+            MessageDigest md5 = MessageDigest.getInstance("MD5");
+            byte[] hash = md5.digest(bytesOfMessage);
+            StringBuilder sb = new StringBuilder(2 * hash.length);
+
+            for (byte b : hash) {
+                sb.append(String.format("%02x", b & 0xff));
+            }
+
+            String digest = sb.toString();
+
+            return digest;
+        } catch (RuntimeException | NoSuchAlgorithmException e) {
+            return "";
+        }
     }
 }

@@ -35,7 +35,7 @@ public record RachioApiDevice( //
         @NonNull Map<RachioId.Zone, RachioApiZone> zones, //
         double latitude, //
         double longitude, //
-        List<RachioApiScheduleRule> scheduleRules, //
+        @NonNull Map<RachioId.Schedule, RachioApiScheduleRule> scheduleRules, //
         String serialNumber, //
         Date rainDelayExpirationDate, //
         Date rainDelayStartDate, //
@@ -45,6 +45,7 @@ public record RachioApiDevice( //
         long utcOffset, //
         boolean rainSensorTripped) {
     public static final RachioApiDevice EMPTY = new RachioApiDevice(null, null, null, null, null,
-            Collections.<RachioId.Zone, RachioApiZone> emptyMap(), 0.0, 0.0, null, null, null, null, null, false, null,
-            0L, false);
+            Collections.<RachioId.Zone, RachioApiZone> emptyMap(), 0.0, 0.0,
+            Collections.<RachioId.Schedule, RachioApiScheduleRule> emptyMap(), null, null, null, null, false, null, 0L,
+            false);
 }

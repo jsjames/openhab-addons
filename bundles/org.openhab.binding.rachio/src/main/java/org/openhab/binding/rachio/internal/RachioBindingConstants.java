@@ -147,6 +147,7 @@ public class RachioBindingConstants {
     public static final String SERVLET_IMAGE_MIME_TYPE = "image/png";
     public static final String SERVLET_IMAGE_URL_BASE = "https://prod-media-photo.rach.io/";
 
+    public static final String CONTENT_TYPE_JSON = "application/json";
     public static final String RACHIO_JSON_RATE_LIMIT = "X-RateLimit-Limit";
     public static final String RACHIO_JSON_RATE_REMAINING = "X-RateLimit-Remaining";
     public static final String RACHIO_JSON_RATE_RESET = "X-RateLimit-Reset";

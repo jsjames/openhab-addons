@@ -21,7 +21,7 @@ import org.openhab.binding.rachio.internal.api.dto.RachioApiBaseStation;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiDevice;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiValve;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiZone;
-import org.openhab.binding.rachio.internal.handler.RachioCloudConnector;
+import org.openhab.binding.rachio.internal.handler.RachioCloudConnectorHandler;
 import org.openhab.core.config.discovery.AbstractThingHandlerDiscoveryService;
 import org.openhab.core.config.discovery.DiscoveryResult;
 import org.openhab.core.config.discovery.DiscoveryResultBuilder;
@@ -38,7 +38,7 @@ import org.openhab.core.thing.ThingUID;
  * @author Jeff James - Initial contribution
  */
 @NonNullByDefault
-public class RachioDiscoveryService extends AbstractThingHandlerDiscoveryService<RachioCloudConnector> {
+public class RachioDiscoveryService extends AbstractThingHandlerDiscoveryService<RachioCloudConnectorHandler> {
     private static final Set<ThingTypeUID> DISCOVERABLE_THING_TYPE_UIDS = Set.of(THING_TYPE_CONTROLLER, THING_TYPE_ZONE,
             THING_TYPE_BASE_STATION, THING_TYPE_VALVE);
 
@@ -55,14 +55,14 @@ public class RachioDiscoveryService extends AbstractThingHandlerDiscoveryService
     }
 
     public RachioDiscoveryService() {
-        super(RachioCloudConnector.class, DISCOVERABLE_THING_TYPE_UIDS, 0, false);
+        super(RachioCloudConnectorHandler.class, DISCOVERABLE_THING_TYPE_UIDS, 0, false);
     }
 
     @Override
     protected synchronized void startScan() {
         removeOlderResults(System.currentTimeMillis());
         if (thingHandler.getThing().getStatus() == ThingStatus.ONLINE) {
-            thingHandler.refreshDeviceStatus();
+            thingHandler.refreshStructure();
         }
     }
 

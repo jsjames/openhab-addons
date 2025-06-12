@@ -12,17 +12,23 @@
  */
 package org.openhab.binding.rachio.internal.handler;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.binding.rachio.internal.api.RachioApi;
 import org.openhab.binding.rachio.internal.api.RachioId;
+import org.openhab.binding.rachio.internal.api.dto.RachioApiEvent;
 import org.openhab.core.thing.Bridge;
+import org.openhab.core.thing.Thing;
 import org.openhab.core.thing.ThingStatus;
 import org.openhab.core.thing.ThingStatusDetail;
 import org.openhab.core.thing.ThingStatusInfo;
 import org.openhab.core.thing.binding.BaseBridgeHandler;
 import org.openhab.core.thing.binding.BridgeHandler;
+import org.openhab.core.thing.binding.ThingHandler;
 
 /**
  * {@link AbstractRachioBridgeHandler}
@@ -30,15 +36,19 @@ import org.openhab.core.thing.binding.BridgeHandler;
  * @author Jeff James - Initial contribution
  */
 @NonNullByDefault
-public abstract class AbstractRachioBridgeHandler<BH extends BaseBridgeHandler, ID extends RachioId.Id>
+public abstract class AbstractRachioBridgeHandler<BH extends BaseBridgeHandler, ID extends RachioId.Id, CH_ID extends RachioId.Id>
         extends BaseBridgeHandler {
     protected final RachioApi api;
     protected final ID id;
+    protected final RachioCloudConnectorHandler cloudConnectorHandler;
+    protected Map<CH_ID, AbstractRachioThingHandler<?, ?>> childHandlers = new HashMap<>();
 
-    public AbstractRachioBridgeHandler(final Bridge thing, ID id, final RachioApi api) {
+    public AbstractRachioBridgeHandler(final Bridge thing, ID id, final RachioApi api,
+            RachioCloudConnectorHandler cloudConnectorHandler) {
         super(thing);
         this.api = api;
         this.id = id;
+        this.cloudConnectorHandler = cloudConnectorHandler;
     }
 
     public void initialize() {
@@ -51,6 +61,34 @@ public abstract class AbstractRachioBridgeHandler<BH extends BaseBridgeHandler, 
     }
 
     public abstract void goOnline();
+
+    public void goOffline(ThingStatusDetail thingStatusDetail, @Nullable String description) {
+        updateStatus(ThingStatus.OFFLINE, thingStatusDetail, description);
+    }
+
+    public abstract boolean webhookEvent(RachioApiEvent event);
+
+    @Override
+    public void childHandlerInitialized(ThingHandler childHandler, Thing childThing) {
+        if (childHandler instanceof AbstractRachioThingHandler<?, ?> rachioChildHandler) {
+            @SuppressWarnings("unchecked")
+            CH_ID childId = (CH_ID) rachioChildHandler.getId();
+            childHandlers.put(childId, rachioChildHandler);
+        }
+    }
+
+    public RachioCloudConnectorHandler getCloudConnectorHandler() {
+        return cloudConnectorHandler;
+    }
+
+    @Override
+    public void childHandlerDisposed(ThingHandler childHandler, Thing childThing) {
+        if (childHandler instanceof AbstractRachioThingHandler<?, ?> rachioChildHandler) {
+            @SuppressWarnings("unchecked")
+            CH_ID childId = (CH_ID) rachioChildHandler.getId();
+            childHandlers.remove(childId);
+        }
+    }
 
     @Override
     public void bridgeStatusChanged(ThingStatusInfo bridgeStatusInfo) {

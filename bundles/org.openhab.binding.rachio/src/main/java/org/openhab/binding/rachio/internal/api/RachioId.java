@@ -21,6 +21,8 @@ import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
+import com.google.gson.JsonSerializationContext;
+import com.google.gson.JsonSerializer;
 
 /**
  * The {@link RachioId} used to in type-checking the Rachio IDs
@@ -37,6 +39,7 @@ public class RachioId {
     }
 
     public record Zone(String idString) implements Id {
+        static public final Zone EMPTY = new Zone("");
     }
 
     public record Schedule(String idString) implements Id {
@@ -62,10 +65,25 @@ public class RachioId {
     public record BaseStation(String idString) implements Id {
     }
 
-    public static class RachioIdDeserializer<T> implements JsonDeserializer<T> {
+    public static RachioId.Id create(String type, String idString) {
+        return switch (type.toUpperCase()) {
+            case "DEVICE" -> new Device(idString);
+            case "ZONE" -> new Zone(idString);
+            case "SCHEDULE" -> new Schedule(idString);
+            case "EVENT" -> new Event(idString);
+            case "PERSON" -> new Person(idString);
+            case "WEBHOOK" -> new Webhook(idString);
+            case "PROGRAM" -> new Program(idString);
+            case "VALVE" -> new Valve(idString);
+            case "BASESTATION" -> new BaseStation(idString);
+            default -> throw new IllegalArgumentException("Unknown Rachio ID type: " + type);
+        };
+    }
+
+    public static class RachioIdGsonAdpater<T> implements JsonDeserializer<T>, JsonSerializer<T> {
         private final Class<T> clazz;
 
-        public RachioIdDeserializer(Class<T> clazz) {
+        public RachioIdGsonAdpater(Class<T> clazz) {
             this.clazz = clazz;
         }
 
@@ -77,6 +95,15 @@ public class RachioId {
             } catch (InstantiationException | IllegalAccessException | InvocationTargetException
                     | NoSuchMethodException e) {
                 throw new JsonParseException("Unable to parse JSON");
+            }
+        }
+
+        @Override
+        public JsonElement serialize(T src, Type typeOfSrc, JsonSerializationContext context) {
+            if (src instanceof Id id) {
+                return context.serialize(id.idString());
+            } else {
+                throw new JsonParseException("Unable to serialize JSON");
             }
         }
     }

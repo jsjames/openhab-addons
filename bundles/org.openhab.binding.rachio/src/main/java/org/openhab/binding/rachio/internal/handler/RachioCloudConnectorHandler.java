@@ -19,6 +19,7 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledFuture;
@@ -36,8 +37,10 @@ import org.openhab.binding.rachio.internal.api.RachioWebhookServlet;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiBaseStation;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiDevice;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiEvent;
+import org.openhab.binding.rachio.internal.api.dto.RachioApiEventType;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiPerson;
-import org.openhab.binding.rachio.internal.configuration.RachioBridgeConfiguration;
+import org.openhab.binding.rachio.internal.api.dto.RachioApiWebhook;
+import org.openhab.binding.rachio.internal.configuration.RachioCloudConnectorConfiguration;
 import org.openhab.binding.rachio.internal.discovery.RachioDiscoveryService;
 import org.openhab.binding.rachio.utils.ClientRateLimitManager.RateLimitThrottleException;
 import org.openhab.core.cache.ExpiringCache;
@@ -55,7 +58,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * {@link RachioCloudConnector} is responsible for implementing the cloud api access.
+ * {@link RachioCloudConnectorHandler} is responsible for implementing the cloud api access.
  * The concept of a Bridge is used. In general multiple bridges are supported using different API keys.
  * Devices are linked to the bridge. All devices and zones go offline if the cloud api access fails.
  *
@@ -63,30 +66,36 @@ import org.slf4j.LoggerFactory;
  * @author Jeff James - initial contribution
  */
 @NonNullByDefault
-public class RachioCloudConnector extends BaseBridgeHandler {
-    private final Logger logger = LoggerFactory.getLogger(RachioCloudConnector.class);
-    private final RachioApi rachioApi;
+public class RachioCloudConnectorHandler extends BaseBridgeHandler {
+    private final Logger logger = LoggerFactory.getLogger(RachioCloudConnectorHandler.class);
+    private final RachioApi api;
     private @Nullable RachioDiscoveryService discoveryService;
-    private RachioBridgeConfiguration config;
+    private RachioCloudConnectorConfiguration config;
     private RachioId.Person personId = RachioId.Person.EMPTY;
-    private ExpiringCache<RachioApiPerson> rachioApiPersonCache = new ExpiringCache<>(Duration.ofSeconds(30),
+    private ExpiringCache<RachioApiPerson> rachioApiPersonCache = new ExpiringCache<>(Duration.ofMinutes(5),
             this::getApiPerson);
     private ExpiringCache<Map<RachioId.BaseStation, RachioApiBaseStation>> rachioApiBaseStationsCache = new ExpiringCache<>(
-            Duration.ofSeconds(120), this::getApiBaseStations);
+            Duration.ofMinutes(5), this::getApiBaseStations);
     private Map<RachioId.Device, RachioControllerHandler> controllerHandlers = new HashMap<>();
     private Map<RachioId.BaseStation, RachioBaseStationHandler> baseStationHandlers = new HashMap<>();
 
+    @Nullable
     RachioWebhookServlet rachioWebhookServlet;
+    private boolean pollingMode = true;
 
     @Nullable
     private ScheduledFuture<?> pollingJob;
     private boolean jobPending = false;
 
-    public RachioCloudConnector(final Bridge bridge, HttpClient httpClient, HttpService httpService) {
+    public RachioCloudConnectorHandler(final Bridge bridge, HttpClient httpClient, HttpService httpService) {
         super(bridge);
-        rachioApi = new RachioApi(httpClient);
-        rachioWebhookServlet = new RachioWebhookServlet(httpService, this);
-        config = getConfigAs(RachioBridgeConfiguration.class);
+        api = new RachioApi(httpClient);
+        config = getConfigAs(RachioCloudConnectorConfiguration.class);
+        pollingMode = config.callbackUrl.isBlank();
+
+        if (!pollingMode) {
+            rachioWebhookServlet = new RachioWebhookServlet(httpService, this, api);
+        }
     }
 
     @Override
@@ -100,27 +109,31 @@ public class RachioCloudConnector extends BaseBridgeHandler {
 
         try {
             logger.debug("RachioCloud: Connecting to Rachio Cloud");
-            rachioApi.initialize(config.apikey);
-            personId = rachioApi.getPersonId();
+            api.initialize(config.apikey);
+            personId = api.getPersonId();
 
             updateProperties();
             updateStatus(ThingStatus.ONLINE);
 
             // Call after bridge is online
-            refreshDeviceStatus();
-        } catch (RachioApiException | RateLimitThrottleException e) {
-            errorMessage = e.toString();
-            /*
-             * TODO
-             * if (e.getApiResult().isResponseRateLimit()) {
-             * logger.warn("RachioCloud: Account is blocked due to rate limit, wait 24h and retry");
-             * }
-             */
+            refreshStructure();
+        } catch (RachioApiException e) {
+            errorMessage = "RachioCloud: Rachio API exception: " + e.getLocalizedMessage();
+            logger.warn("RachioCloud: Rachio API exception: {}", errorMessage);
+        } catch (RateLimitThrottleException e) {
+            errorMessage = "RachioCloud: Rachio limit exceeded, retry later";
+            logger.warn("RachioCloud: Rachio API exception: {}", e.toString());
+        } catch (IllegalStateException e) {
+            errorMessage = "RachioCloud: Illegal state, check configuration";
+            logger.error("RachioCloud: Illegal state, check configuration: {}", e.getLocalizedMessage());
+        } catch (NullPointerException e) {
+            errorMessage = "RachioCloud: Null pointer exception, check configuration";
+            logger.error("RachioCloud: Null pointer exception, check configuration: {}", e.getLocalizedMessage());
         } catch (RuntimeException | InterruptedException | TimeoutException | ExecutionException e) {
             errorMessage = requireNonNullElse(e.getLocalizedMessage(), "Unknown exception occurred");
+            logger.error("RachioCloud: Exception during initialization: {}", errorMessage);
         } finally {
             if (!errorMessage.isEmpty()) {
-                logger.debug("RachioCloud: {}", errorMessage);
                 updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR, errorMessage);
             }
         }
@@ -161,7 +174,7 @@ public class RachioCloudConnector extends BaseBridgeHandler {
     @Nullable
     protected RachioApiPerson getApiPerson() {
         try {
-            return rachioApi.getPerson(personId);
+            return api.getPerson(personId);
         } catch (InterruptedException | TimeoutException | ExecutionException | RachioApiException e) {
             goOffline(ThingStatusDetail.COMMUNICATION_ERROR, "@text/rachio-api-communication-error");
             logger.error("Exception during getPerson: {}", e.getLocalizedMessage());
@@ -171,10 +184,14 @@ public class RachioCloudConnector extends BaseBridgeHandler {
         }
     }
 
+    public boolean isPollingMode() {
+        return pollingMode;
+    }
+
     @Nullable
     protected Map<RachioId.BaseStation, RachioApiBaseStation> getApiBaseStations() {
         try {
-            return rachioApi.getBaseStations(personId);
+            return api.getBaseStations(personId);
         } catch (InterruptedException | TimeoutException | ExecutionException | RachioApiException e) {
             goOffline(ThingStatusDetail.COMMUNICATION_ERROR, "@text/rachio-api-communication-error");
             logger.error("Exception during getBaseStations: {}", e.getLocalizedMessage());
@@ -188,7 +205,7 @@ public class RachioCloudConnector extends BaseBridgeHandler {
      * Update device status (poll Rachio Cloud)
      * in addition webhooks are used to get events (if callbackUrl is configured)
      */
-    public void refreshDeviceStatus() {
+    public void refreshStructure() {
         String errorMessage = "";
         logger.trace("RachioCloud: refreshDeviceStatus");
 
@@ -213,34 +230,47 @@ public class RachioCloudConnector extends BaseBridgeHandler {
                 jobPending = true;
             }
 
-            RachioApiPerson localRachioApiPerson = rachioApi.getPerson(personId);
-            RachioUtils.compareCollections(localRachioApiPerson.devices().keySet(), controllerHandlers.keySet(),
-                    id -> localDiscoveryService.notifyDiscoveryController(getThing().getUID(),
-                            requireNonNull(localRachioApiPerson.devices().get(id))),
-                    id -> requireNonNull(controllerHandlers.get(id)).goOffline(ThingStatusDetail.GONE,
-                            "@text/controller-removed"),
-                    id -> requireNonNull(controllerHandlers.get(id))
-                            .onStatusRefresh(requireNonNull(localRachioApiPerson.devices().get(id))));
-            rachioApiPersonCache.putValue(localRachioApiPerson);
+            if (rachioApiPersonCache.isExpired()) {
+                RachioApiPerson rachioApiPerson = rachioApiPersonCache.getValue();
+                if (rachioApiPerson != null) {
+                    RachioUtils.reconcileCollections(rachioApiPerson.devices().keySet(), controllerHandlers.keySet(),
+                            id -> localDiscoveryService.notifyDiscoveryController(getThing().getUID(),
+                                    requireNonNull(rachioApiPerson.devices().get(id))),
+                            id -> requireNonNull(controllerHandlers.get(id)).goOffline(ThingStatusDetail.GONE,
+                                    "@text/controller-removed"),
+                            id -> requireNonNull(controllerHandlers.get(id))
+                                    .onStructureUpdate(requireNonNull(rachioApiPerson.devices().get(id))));
+                }
+            }
 
-            Map<RachioId.BaseStation, RachioApiBaseStation> rachioApiBaseStations = rachioApi.getBaseStations(personId);
-            RachioUtils.compareCollections(rachioApiBaseStations.keySet(), baseStationHandlers.keySet(),
-                    id -> localDiscoveryService.notifyDiscoveryBaseStation(getThing().getUID(),
-                            requireNonNull(rachioApiBaseStations.get(id))),
-                    id -> requireNonNull(baseStationHandlers.get(id)).goOffline(ThingStatusDetail.GONE,
-                            "@text/basestation-removed"),
-                    id -> requireNonNull(baseStationHandlers.get(id))
-                            .onStatusRefresh(requireNonNull(rachioApiBaseStations.get(id))));
-            rachioApiBaseStationsCache.putValue(rachioApiBaseStations);
-        } catch (RachioApiException e) {
-            errorMessage = e.toString();
-        } catch (InterruptedException | TimeoutException | ExecutionException | RateLimitThrottleException e) {
-            errorMessage = requireNonNull(e.getLocalizedMessage(), "Exception during API");
+            if (rachioApiBaseStationsCache.isExpired()) {
+                Map<RachioId.BaseStation, RachioApiBaseStation> rachioApiBaseStations = rachioApiBaseStationsCache
+                        .getValue();
+                if (rachioApiBaseStations != null) {
+                    RachioUtils.reconcileCollections(rachioApiBaseStations.keySet(), baseStationHandlers.keySet(),
+                            id -> localDiscoveryService.notifyDiscoveryBaseStation(getThing().getUID(),
+                                    requireNonNull(rachioApiBaseStations.get(id))),
+                            id -> requireNonNull(baseStationHandlers.get(id)).goOffline(ThingStatusDetail.GONE,
+                                    "@text/basestation-removed"),
+                            id -> requireNonNull(baseStationHandlers.get(id))
+                                    .onStructureUpdate(requireNonNull(rachioApiBaseStations.get(id))));
+                }
+            }
         } finally {
             if (!errorMessage.isEmpty()) {
                 logger.debug("RachioBridge: {}", errorMessage);
             }
             jobPending = false;
+        }
+    }
+
+    public void onPollingUpdate() {
+        logger.debug("RachioCloud: onPollingUpdate called");
+        try {
+            controllerHandlers.values().forEach(RachioControllerHandler::onPollingUpdate);
+            baseStationHandlers.values().forEach(RachioBaseStationHandler::onPollingUpdate);
+        } catch (Exception e) {
+            logger.error("Unhandled exception in onPollingUpdate: {}", e.toString());
         }
     }
 
@@ -274,16 +304,53 @@ public class RachioCloudConnector extends BaseBridgeHandler {
      * @return callbackUrl
      */
     public String getCallbackUrl() {
-        return getConfigAs(RachioBridgeConfiguration.class).callbackUrl;
+        String callbackUrl = getConfigAs(RachioCloudConnectorConfiguration.class).callbackUrl;
+        return RachioUtils.enocdeUri(callbackUrl);
+    }
+
+    public String getExternalId() {
+        return "OH_" + RachioUtils.getMD5Hash(getThing().getUID().getAsString());
     }
 
     /**
-     * Retrieve the clearAllCallbacks flag from thing config
-     *
-     * @return true=clear all callbacks, false=clear only the current one (avoid multiple instances)
+     * {@link registerWebhook} will check to see if existing webhook exists and deletes.
+     * Then, will create new webhook for this device.
+     * 
+     * @param externalId
+     * @throws RateLimitThrottleException
+     * @throws RachioApiException
      */
-    public Boolean getClearAllCallbacks() {
-        return getConfigAs(RachioBridgeConfiguration.class).clearAllCallbacks;
+    public RachioId.Webhook registerWebhook(RachioId.Id rachioId) throws InterruptedException, TimeoutException,
+            ExecutionException, RachioApiException, RateLimitThrottleException {
+        List<RachioApiWebhook> webhooks = api.getListWebhook(rachioId);
+
+        String callbackUrl = getCallbackUrl();
+        String externalId = getExternalId();
+
+        logger.debug("Registered webhooks for device '{}': {}", rachioId, webhooks.toString());
+        for (RachioApiWebhook webhook : webhooks) {
+            logger.debug("Webhook: id='{}', url='{}', externalId='{}'", webhook.id(), webhook.url(),
+                    webhook.externalId());
+            if (webhook.url().equals(callbackUrl.toString()) && webhook.externalId().equals(externalId)) {
+                logger.debug("The callback url '{}' is already registered -> delete", webhook.url());
+                api.deleteWebhook(webhook.id());
+            }
+        }
+
+        String resourceType = rachioId instanceof RachioId.Device ? "IRRIGATION_CONTROLLER"
+                : rachioId instanceof RachioId.Valve ? "VALVE"
+                        : rachioId instanceof RachioId.Program ? "PROGRAM" : null;
+
+        List<RachioApiEventType> eventTypes = api.getListWebhookEventTypes();
+        RachioApiEventType irrigationControllerEventType = eventTypes.stream() //
+                .filter(et -> et.resourceType().equals(resourceType)) //
+                .findFirst() //
+                .orElseThrow(() -> new IllegalStateException(
+                        "No event types found for resource type 'IRRIGATION_CONTROLLER'"));
+
+        RachioApiWebhook rachioApiWebhook = api.createWebhook(rachioId, callbackUrl, externalId,
+                irrigationControllerEventType.eventTypes());
+        return rachioApiWebhook.id();
     }
 
     public RachioDiscoveryService getDiscoveryService() {
@@ -336,13 +403,22 @@ public class RachioCloudConnector extends BaseBridgeHandler {
      * @return
      */
     public boolean webhookEvent(RachioApiEvent event) {
-        // TODO
-        if (controllerHandlers.get(event.deviceId()) instanceof RachioControllerHandler rachioControllerHandler) {
-            return rachioControllerHandler.webhookEvent(event);
-        } else {
-            logger.debug("RachioCloud: Event {}.{} for unknown device {}: {}", event.category(), event.type(),
-                    event.deviceId(), event.summary());
+        if (event.resourceId() instanceof RachioId.Device deviceId) {
+            if (controllerHandlers.containsKey(deviceId)) {
+                return controllerHandlers.get(deviceId).webhookEvent(event);
+            } else {
+                logger.debug("RachioCloud: Event {} for unknown device {}", event.type(), deviceId.idString());
+            }
+        } else if (event.resourceId() instanceof RachioId.BaseStation baseStationId) {
+            // If the event is for a base station, dispatch to the base station handler
+            if (baseStationHandlers.containsKey(baseStationId)) {
+                return baseStationHandlers.get(baseStationId).webhookEvent(event);
+            } else {
+                logger.debug("RachioCloud: Event {} for unknown base station {}", event.type(),
+                        baseStationId.idString());
+            }
         }
+
         return false;
     }
 
@@ -386,7 +462,10 @@ public class RachioCloudConnector extends BaseBridgeHandler {
         @Override
         public void run() {
             try {
-                refreshDeviceStatus();
+                refreshStructure();
+                if (pollingMode) {
+                    onPollingUpdate();
+                }
             } catch (Exception e) {
                 logger.error("Unhandled exception: {}", e.toString());
             }
@@ -397,7 +476,9 @@ public class RachioCloudConnector extends BaseBridgeHandler {
     public synchronized void dispose() {
         logger.debug("RachioCloud: Disposing handler");
 
-        rachioWebhookServlet.dispose();
+        if (rachioWebhookServlet != null) {
+            rachioWebhookServlet.dispose();
+        }
 
         // TODO getApi().deleteAllWebhooks();
 
@@ -409,6 +490,6 @@ public class RachioCloudConnector extends BaseBridgeHandler {
     }
 
     public RachioApi getApi() {
-        return rachioApi;
+        return api;
     }
 }

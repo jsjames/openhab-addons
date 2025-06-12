@@ -15,7 +15,7 @@ package org.openhab.binding.rachio.internal.api;
 import static org.openhab.binding.rachio.internal.RachioBindingConstants.*;
 
 import java.io.IOException;
-import java.util.Scanner;
+import java.nio.charset.StandardCharsets;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServlet;
@@ -24,14 +24,15 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
-import org.openhab.binding.rachio.internal.api.dto.RachioApiEvent;
-import org.openhab.binding.rachio.internal.handler.RachioCloudConnector;
+import org.openhab.binding.rachio.internal.handler.RachioCloudConnectorHandler;
 import org.osgi.service.http.HttpService;
 import org.osgi.service.http.NamespaceException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 
 /**
  * {@link RachioWebhookServlet} implements the callback for the Rachio Cloud event API.
@@ -42,14 +43,16 @@ import com.google.gson.Gson;
 public class RachioWebhookServlet extends HttpServlet {
     private static final long serialVersionUID = 8706067059503620493L;
     private final Logger logger = LoggerFactory.getLogger(RachioWebhookServlet.class);
-    private final Gson gson = new Gson();
+    private final Gson gson;
 
     private final HttpService httpService;
-    private final RachioCloudConnector rachioBridgeHandler;
+    private final RachioCloudConnectorHandler rachioBridgeHandler;
 
-    public RachioWebhookServlet(HttpService httpService, RachioCloudConnector rachioBridgeHandler) {
+    public RachioWebhookServlet(HttpService httpService, RachioCloudConnectorHandler rachioBridgeHandler,
+            RachioApi api) {
         this.httpService = httpService;
         this.rachioBridgeHandler = rachioBridgeHandler;
+        this.gson = api.getGson();
         try {
             httpService.registerServlet(SERVLET_WEBHOOK_PATH, this, null, httpService.createDefaultHttpContext());
             logger.debug("RachioWebhook: Started servlet at {}", SERVLET_WEBHOOK_PATH);
@@ -64,79 +67,103 @@ public class RachioWebhookServlet extends HttpServlet {
     }
 
     @Override
-    protected void service(@Nullable HttpServletRequest request, @Nullable HttpServletResponse resp)
+    protected void doGet(@Nullable HttpServletRequest request, @Nullable HttpServletResponse resp)
+            throws ServletException, IOException {
+        logger.debug("RachioWebhook: doGet called");
+    }
+
+    @Override
+    protected void doPost(@Nullable HttpServletRequest request, @Nullable HttpServletResponse resp)
             throws ServletException, IOException {
         if (request == null) {
+            logger.debug("RachioWebhook: doPost called with null request");
             return;
         }
 
-        String data = inputStreamToString(request);
-        try {
-            String ipAddress = request.getHeader("HTTP_X_FORWARDED_FOR");
-            ipAddress = (ipAddress != null) ? ipAddress : request.getRemoteAddr();
-            String path = request.getRequestURI();
+        JsonElement jsonContent = JsonParser.parseReader(request.getReader());
+        logger.debug("RachioWebhook: doPost called: {}", jsonContent.toString());
 
-            if (path == null) {
-                logger.debug("RachioWebhook: invalid request URI");
-                return;
-            }
-
-            logger.trace("RachioWebhook: Reqeust from {}:{}{} ({}:{}, {})", ipAddress, request.getRemotePort(), path,
-                    request.getRemoteHost(), request.getServerPort(), request.getProtocol());
-            if (!path.equalsIgnoreCase(SERVLET_WEBHOOK_PATH)) {
-                logger.debug("RachioWebhook: Invalid request received - path = {}", path);
-                return;
-            }
-
-            // Fix malformed API v3 Event JSON
-            /*
-             * TODO - do we still need this?
-             * data = data.replace("\"{", "{");
-             * data = data.replace("}\"", "}");
-             * data = data.replace("\\", "");
-             * data = data.replace("\"?\"", "'?'"); // fix json for"summary" : "<Device> has turned off and back on.
-             * // This
-             * // is usually not a problem. If power cycles continue, tap "?"
-             * // above to
-             * // contact Rachio Support.",
-             */
-            logger.trace("RachioWebhook: Data='{}'", data);
-            RachioApiEvent event = gson.fromJson(data, RachioApiEvent.class);
-
-            if (event == null) {
-                logger.error("Invalid event JSON");
-                return;
-            }
-
-            logger.trace("RachioEvent {}.{} for device '{}': {}", event.category(), event.type(), event.deviceId(),
-                    event.summary());
-            // TODO
-            // event.apiResult.setRateLimit(request.getHeader(RACHIO_JSON_RATE_LIMIT),
-            // request.getHeader(RACHIO_JSON_RATE_REMAINING), request.getHeader(RACHIO_JSON_RATE_RESET));
-
-            if (!rachioBridgeHandler.webhookEvent(event)) {
-                logger.debug("RachioWebhook: Event-JSON='{}'", data);
-            }
-            return;
-        } catch (RuntimeException e) {
-            logger.debug("RachioWebhook: Exception processing callback: {}, data='{}'", e.getMessage(), data);
-        } finally {
-            if (resp != null) {
-                setHeaders(resp);
-                resp.getWriter().write("");
-            }
+        if (resp != null) {
+            setHeaders(resp);
+            resp.getWriter().write("");
         }
     }
 
-    @SuppressWarnings("resource")
-    private String inputStreamToString(HttpServletRequest request) throws IOException {
-        Scanner scanner = new Scanner(request.getInputStream()).useDelimiter("\\A");
-        return scanner.hasNext() ? scanner.next() : "";
-    }
+    /*
+     * @Override
+     * protected void service(@Nullable HttpServletRequest request, @Nullable HttpServletResponse resp)
+     * throws ServletException, IOException {
+     * if (request == null) {
+     * logger.debug("RachioWebhook: doPost called with null request");
+     * return;
+     * }
+     * 
+     * JsonElement jsonContent = JsonParser.parseReader(request.getReader());
+     * logger.debug("RachioWebhook: doPost called: {}", jsonContent.toString());
+     * 
+     * if(resp != null) {
+     * setHeaders(resp);
+     * resp.getWriter().write("");
+     * }
+     * 
+     * String data = inputStreamToString(request);
+     * try {
+     * String ipAddress = request.getHeader("HTTP_X_FORWARDED_FOR");
+     * ipAddress = (ipAddress != null) ? ipAddress : request.getRemoteAddr();
+     * String path = request.getRequestURI();
+     * 
+     * if (path == null) {
+     * logger.debug("RachioWebhook: invalid request URI");
+     * return;
+     * }
+     * 
+     * logger.trace("RachioWebhook: Reqeust from {}:{}{} ({}:{}, {})", ipAddress, request.getRemotePort(), path,
+     * request.getRemoteHost(), request.getServerPort(), request.getProtocol());
+     * if (!path.equalsIgnoreCase(SERVLET_WEBHOOK_PATH)) {
+     * logger.debug("RachioWebhook: Invalid request received - path = {}", path);
+     * return;
+     * }
+     * 
+     * // Fix malformed API v3 Event JSON
+     * // TODO - do we still need this?
+     * // data = data.replace("\"{", "{");
+     * // data = data.replace("}\"", "}");
+     * // data = data.replace("\\", "");
+     * // data = data.replace("\"?\"", "'?'"); // fix json for"summary" : "<Device> has turned off and back on.
+     * // This is usually not a problem. If power cycles continue, tap "?"/ above to
+     * // contact Rachio Support.",
+     * logger.trace("RachioWebhook: Data='{}'", data);
+     * RachioApiEvent event = gson.fromJson(data, RachioApiEvent.class);
+     * 
+     * if (event == null) {
+     * logger.error("Invalid event JSON");
+     * return;
+     * }
+     * 
+     * // logger.trace("RachioEvent {}.{} for device '{}': {}", event.category(), event.type(), event.deviceId(),
+     * // event.summary());
+     * // TODO
+     * // event.apiResult.setRateLimit(request.getHeader(RACHIO_JSON_RATE_LIMIT),
+     * // request.getHeader(RACHIO_JSON_RATE_REMAINING), request.getHeader(RACHIO_JSON_RATE_RESET));
+     * 
+     * if (!rachioBridgeHandler.webhookEvent(event)) {
+     * logger.debug("RachioWebhook: Event-JSON='{}'", data);
+     * }
+     * return;
+     * } catch (RuntimeException e) {
+     * logger.debug("RachioWebhook: Exception processing callback: {}, data='{}'", e.getMessage(), data);
+     * } finally {
+     * if (resp != null) {
+     * setHeaders(resp);
+     * resp.getWriter().write("");
+     * }
+     * }
+     * }
+     */
 
     private void setHeaders(HttpServletResponse response) {
-        response.setCharacterEncoding(SERVLET_WEBHOOK_CHARSET);
-        response.setContentType(SERVLET_WEBHOOK_APPLICATION_JSON);
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
+        response.setContentType(CONTENT_TYPE_JSON);
         response.setHeader("Access-Control-Allow-Origin", "*");
         response.setHeader("Access-Control-Allow-Methods", "POST");
         response.setHeader("Access-Control-Max-Age", "3600");

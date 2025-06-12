@@ -14,6 +14,7 @@ package org.openhab.binding.rachio.internal;
 
 import static org.openhab.binding.rachio.internal.RachioBindingConstants.*;
 
+import java.util.Objects;
 import java.util.Set;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
@@ -21,7 +22,7 @@ import org.eclipse.jdt.annotation.Nullable;
 import org.eclipse.jetty.client.HttpClient;
 import org.openhab.binding.rachio.internal.api.RachioId;
 import org.openhab.binding.rachio.internal.handler.RachioBaseStationHandler;
-import org.openhab.binding.rachio.internal.handler.RachioCloudConnector;
+import org.openhab.binding.rachio.internal.handler.RachioCloudConnectorHandler;
 import org.openhab.binding.rachio.internal.handler.RachioControllerHandler;
 import org.openhab.binding.rachio.internal.handler.RachioValveHandler;
 import org.openhab.binding.rachio.internal.handler.RachioZoneHandler;
@@ -57,7 +58,7 @@ public class RachioHandlerFactory extends BaseThingHandlerFactory {
     private final HttpService httpService;
 
     @Nullable
-    private RachioCloudConnector rachioBridgeHandler = null;
+    private RachioCloudConnectorHandler cloudConnectorHandler = null;
 
     @Activate
     public RachioHandlerFactory(final @Reference HttpClientFactory httpClientFactory,
@@ -80,7 +81,7 @@ public class RachioHandlerFactory extends BaseThingHandlerFactory {
                 return createBridgeHandler((Bridge) thing, httpClientFactory.getCommonHttpClient(), httpService);
             }
 
-            RachioCloudConnector lRachioBridgeHandler = rachioBridgeHandler;
+            RachioCloudConnectorHandler lRachioBridgeHandler = cloudConnectorHandler;
             if (lRachioBridgeHandler == null) {
                 logger.debug("RachioHandlerFactory: Unable to create thing handler - no bridge handler found.");
                 return null;
@@ -89,39 +90,39 @@ public class RachioHandlerFactory extends BaseThingHandlerFactory {
             String id = thing.getConfiguration().get(PARAM_ID).toString();
             if (THING_TYPE_CONTROLLER.equals(thingTypeUID)) {
                 return new RachioControllerHandler((Bridge) thing, new RachioId.Device(id),
-                        lRachioBridgeHandler.getApi());
+                        lRachioBridgeHandler.getApi(), Objects.requireNonNull(cloudConnectorHandler));
             } else if (THING_TYPE_ZONE.equals(thingTypeUID)) {
                 return new RachioZoneHandler(thing, new RachioId.Zone(id), lRachioBridgeHandler.getApi());
             } else if (THING_TYPE_BASE_STATION.equals(thingTypeUID)) {
                 return new RachioBaseStationHandler((Bridge) thing, new RachioId.BaseStation(id),
-                        lRachioBridgeHandler.getApi());
+                        lRachioBridgeHandler.getApi(), Objects.requireNonNull(cloudConnectorHandler));
             } else if (THING_TYPE_VALVE.equals(thingTypeUID)) {
                 return new RachioValveHandler(thing, new RachioId.Valve(id), lRachioBridgeHandler.getApi());
             } else {
                 logger.debug("RachioHandlerFactory: Unable to create thing handler - {}", thing.getUID());
             }
         } catch (RuntimeException e) {
-            logger.debug("RachioHandlerFactory:Exception while creating Rachio Thing handler: {}", e.toString());
+            logger.debug("RachioHandlerFactory: Exception while creating Rachio Thing handler: {}", e.toString());
         }
         return null;
     }
 
     @Nullable
-    private RachioCloudConnector createBridgeHandler(Bridge bridgeThing, HttpClient httpClient,
+    private RachioCloudConnectorHandler createBridgeHandler(Bridge bridgeThing, HttpClient httpClient,
             HttpService httpService) {
-        if (rachioBridgeHandler != null) {
+        if (cloudConnectorHandler != null) {
             logger.debug("RachioHandlerFactory: Duplicate bridge already exists.");
             return null;
         }
 
-        rachioBridgeHandler = new RachioCloudConnector(bridgeThing, httpClient, httpService);
-        return rachioBridgeHandler;
+        cloudConnectorHandler = new RachioCloudConnectorHandler(bridgeThing, httpClient, httpService);
+        return cloudConnectorHandler;
     }
 
     @Override
     protected void removeHandler(ThingHandler thingHandler) {
-        if (rachioBridgeHandler != null && thingHandler.equals(rachioBridgeHandler)) {
-            rachioBridgeHandler = null;
+        if (cloudConnectorHandler != null && thingHandler.equals(cloudConnectorHandler)) {
+            cloudConnectorHandler = null;
         }
     }
 }

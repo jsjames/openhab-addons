@@ -32,12 +32,6 @@
 					myopenhab.org account.</description>
 				<required>false</required>
 			</parameter>
-			<parameter name="clearAllCallbacks" type="boolean">
-				<label>Clear Callbacks</label>
-				<description>If true all callbacks will be cleared on registrations.</description>
-				<required>false</required>
-				<default>false</default>
-			</parameter>
 		</config-description>
 	</bridge-type>
 </thing:thing-descriptions>

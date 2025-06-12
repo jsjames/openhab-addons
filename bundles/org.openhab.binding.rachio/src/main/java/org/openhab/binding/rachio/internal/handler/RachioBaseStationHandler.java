@@ -27,6 +27,7 @@ import org.openhab.binding.rachio.internal.api.RachioApi;
 import org.openhab.binding.rachio.internal.api.RachioApiException;
 import org.openhab.binding.rachio.internal.api.RachioId;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiBaseStation;
+import org.openhab.binding.rachio.internal.api.dto.RachioApiEvent;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiValve;
 import org.openhab.binding.rachio.internal.discovery.RachioDiscoveryService;
 import org.openhab.binding.rachio.utils.ClientRateLimitManager.RateLimitThrottleException;
@@ -47,7 +48,8 @@ import org.slf4j.LoggerFactory;
  * @author Jeff James - Initial contribution
  */
 @NonNullByDefault
-public class RachioBaseStationHandler extends AbstractRachioBridgeHandler<RachioCloudConnector, RachioId.BaseStation> {
+public class RachioBaseStationHandler
+        extends AbstractRachioBridgeHandler<RachioCloudConnectorHandler, RachioId.BaseStation, RachioId.Valve> {
     private final Logger logger = LoggerFactory.getLogger(RachioBaseStationHandler.class);
 
     RachioApiBaseStation rachioApiBaseStation = RachioApiBaseStation.EMPTY;
@@ -56,8 +58,9 @@ public class RachioBaseStationHandler extends AbstractRachioBridgeHandler<Rachio
     private ExpiringCache<Map<RachioId.Valve, RachioApiValve>> rachioApiValvesCache = new ExpiringCache<>(
             Duration.ofSeconds(30), this::getApiValves);
 
-    public RachioBaseStationHandler(final Bridge thing, final RachioId.BaseStation baseStationId, final RachioApi api) {
-        super(thing, baseStationId, api);
+    public RachioBaseStationHandler(final Bridge thing, final RachioId.BaseStation baseStationId, final RachioApi api,
+            RachioCloudConnectorHandler cloudConnectorHandler) {
+        super(thing, baseStationId, api, cloudConnectorHandler);
     }
 
     @Override
@@ -88,10 +91,6 @@ public class RachioBaseStationHandler extends AbstractRachioBridgeHandler<Rachio
         }
     }
 
-    public void goOffline(ThingStatusDetail thingStatusDetail, @Nullable String description) {
-        updateStatus(ThingStatus.OFFLINE, thingStatusDetail, description);
-    }
-
     @Nullable
     protected Map<RachioId.Valve, RachioApiValve> getApiValves() {
         try {
@@ -119,16 +118,18 @@ public class RachioBaseStationHandler extends AbstractRachioBridgeHandler<Rachio
             return;
         }
 
-        RachioUtils.compareCollections(rachioApiValves.keySet(), valveHandlers.keySet(),
+        RachioUtils.reconcileCollections(rachioApiValves.keySet(), valveHandlers.keySet(),
                 id -> discoveryService.notifyDiscoveryValve(getThing().getUID(),
                         Objects.requireNonNullElse(getThing().getLabel(), ""),
                         Objects.requireNonNull(rachioApiValves.get(id))),
                 id -> valveHandlers.get(id).goOffline(ThingStatusDetail.GONE, "@test/valve-removed"),
                 id -> Objects.requireNonNull(valveHandlers.get(id))
                         .onStatusRefresh(Objects.requireNonNull(rachioApiValves.get(id))));
+
+        // TODO: Update valve status
     }
 
-    public void onStatusRefresh(RachioApiBaseStation rachioApiBaseStation) {
+    public void onStructureUpdate(RachioApiBaseStation rachioApiBaseStation) {
         if (getThing().getStatus() == ThingStatus.OFFLINE
                 && getThing().getStatusInfo().getStatusDetail() == ThingStatusDetail.COMMUNICATION_ERROR) {
             goOnline();
@@ -151,10 +152,11 @@ public class RachioBaseStationHandler extends AbstractRachioBridgeHandler<Rachio
             // still proceed to update channels
         }
 
-        // TODO - wrap in try/catch
-        refreshValves();
-
         this.rachioApiBaseStation = rachioApiBaseStation;
+    }
+
+    public void onPollingUpdate() {
+        refreshValves();
     }
 
     @Override
@@ -178,6 +180,24 @@ public class RachioBaseStationHandler extends AbstractRachioBridgeHandler<Rachio
         properties.put(Thing.PROPERTY_MAC_ADDRESS, rachioApiBaseStation.macAddress());
 
         updateProperties(properties);
+    }
+
+    public boolean webhookEvent(RachioApiEvent event) {
+        switch (event.type()) {
+            case RachioApiEvent.PROGRAM_RAIN_SKIP_CREATED_EVENT:
+            case RachioApiEvent.PROGRAM_RAIN_SKIP_CANCELLED_EVENT:
+                if (event.payload() instanceof RachioApiEvent.PayloadProgramRainSkip payloadProgramRainSkip) {
+                    logger.info("EVENT: {}", event);
+                }
+                break;
+            case RachioApiEvent.VALVE_RUN_START_EVENT:
+            case RachioApiEvent.VALVE_RUN_END_EVENT:
+                if (event.payload() instanceof RachioApiEvent.PayloadValveRun payloadValueRun) {
+                    logger.info("EVENT: {}", event);
+                }
+                break;
+        }
+        return false;
     }
 
     @Nullable

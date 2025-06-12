@@ -12,22 +12,20 @@
  */
 package org.openhab.binding.rachio.internal.configuration;
 
-import static org.openhab.binding.rachio.internal.RachioBindingConstants.*;
+import static org.openhab.binding.rachio.internal.RachioBindingConstants.DEFAULT_POLLING_INTERVAL_SEC;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 
 /**
- * The {@link RachioBridgeConfiguration} contains the binding configuration and default values. The field names
+ * The {@link RachioCloudConnectorConfiguration} contains the binding configuration and default values. The field names
  * represent the configuration names, do not rename them if you don't intend to break the configuration interface.
  *
  * @author Markus Michels - Initial contribution
  * @author Jeff James - Initial contribution
  */
 @NonNullByDefault
-public class RachioBridgeConfiguration {
+public class RachioCloudConnectorConfiguration {
     public String apikey = "";
     public int pollingInterval = DEFAULT_POLLING_INTERVAL_SEC;
-    public int defaultRuntime = DEFAULT_ZONE_RUNTIME_SEC;
     public String callbackUrl = "";
-    public Boolean clearAllCallbacks = false;
 }

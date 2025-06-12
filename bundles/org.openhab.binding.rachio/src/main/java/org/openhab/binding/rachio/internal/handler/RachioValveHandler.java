@@ -59,6 +59,8 @@ public class RachioValveHandler extends AbstractRachioThingHandler<RachioBaseSta
 
     private RachioApiValve rachioApiValve = RachioApiValve.EMPTY;
 
+    private RachioId.Webhook webhookId = RachioId.Webhook.EMPTY;
+
     private boolean running;
     private long runningDuration;
     private Instant runningStart = Instant.MIN;
@@ -88,11 +90,30 @@ public class RachioValveHandler extends AbstractRachioThingHandler<RachioBaseSta
         updateProperties();
         postChannelData(rachioApiValve, true, null);
 
+        try {
+            webhookId = getBridgeHandler().getCloudConnectorHandler().registerWebhook(id);
+        } catch (InterruptedException | TimeoutException | ExecutionException | RachioApiException
+                | RateLimitThrottleException e) {
+            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
+                    "@text/valve-offline.webhook-registration-failed");
+            logger.error("Unable to register webhook for valve {}: {}", id.idString(), e.getMessage());
+            return;
+        }
+
         updateStatus(ThingStatus.ONLINE);
     }
 
-    public void goOffline(ThingStatusDetail thingStatusDetail, @Nullable String description) {
-        updateStatus(ThingStatus.OFFLINE, thingStatusDetail, description);
+    public void dispose() {
+        try {
+            if (webhookId != RachioId.Webhook.EMPTY) {
+                api.deleteWebhook(webhookId);
+            }
+        } catch (InterruptedException | TimeoutException | ExecutionException | RachioApiException
+                | RateLimitThrottleException e) {
+            logger.debug("Unhandled exception when removing webhook: {}", e.getLocalizedMessage());
+        } finally {
+            webhookId = RachioId.Webhook.EMPTY;
+        }
     }
 
     public void updateValveRunning(Instant start, long durationSeconds) {
@@ -131,7 +152,7 @@ public class RachioValveHandler extends AbstractRachioThingHandler<RachioBaseSta
                 case CHANNEL_VALVE_RUN:
                     if (command == OnOffType.ON) {
                         runTime = getDefaultRunTime();
-                        logger.debug("Starting Valve {} for {} min", rachioApiValve.name(), runTime);
+                        logger.debug("Starting Valve {} for {} sec", rachioApiValve.name(), runTime);
                         api.putValveStartWatering(id, runTime);
                         updateValveRunning(Instant.now(), runTime);
                     } else {

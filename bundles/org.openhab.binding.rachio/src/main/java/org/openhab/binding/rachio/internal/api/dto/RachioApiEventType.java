@@ -12,7 +12,7 @@
  */
 package org.openhab.binding.rachio.internal.api.dto;
 
-import com.google.gson.annotations.SerializedName;
+import java.util.List;
 
 /**
  * {@link RachioApiEventType}
@@ -20,6 +20,6 @@ import com.google.gson.annotations.SerializedName;
  * @author Jeff James - Initial contribution
  */
 public record RachioApiEventType( //
-        @SerializedName("resource_id") String resourceType, //
-        @SerializedName("event_types") String eventType) {
+        String resourceType, //
+        List<String> eventTypes) {
 }

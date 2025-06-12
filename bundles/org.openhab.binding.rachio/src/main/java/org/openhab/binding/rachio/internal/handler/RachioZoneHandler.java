@@ -25,7 +25,6 @@ import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.binding.rachio.internal.api.RachioApi;
 import org.openhab.binding.rachio.internal.api.RachioApiException;
 import org.openhab.binding.rachio.internal.api.RachioId;
-import org.openhab.binding.rachio.internal.api.dto.RachioApiEvent;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiZone;
 import org.openhab.binding.rachio.internal.configuration.RachioZoneConfiguration;
 import org.openhab.binding.rachio.utils.ClientRateLimitManager.RateLimitThrottleException;
@@ -82,7 +81,7 @@ public class RachioZoneHandler extends AbstractRachioThingHandler<RachioControll
         }
 
         RachioApiZone rachioApiZone = getBridgeHandler().getZoneById(id);
-        if (rachioApiZone == null) {
+        if (rachioApiZone == RachioApiZone.EMPTY) {
             logger.debug("RachioApiZone is null");
             return;
         }
@@ -92,10 +91,6 @@ public class RachioZoneHandler extends AbstractRachioThingHandler<RachioControll
         postChannelData(null, true, null);
 
         updateStatus(ThingStatus.ONLINE);
-    }
-
-    public void goOffline(ThingStatusDetail thingStatusDetail, @Nullable String description) {
-        updateStatus(ThingStatus.OFFLINE, thingStatusDetail, description);
     }
 
     public void updateZoneRunning(boolean updateZoneRun, int duration) {
@@ -112,7 +107,7 @@ public class RachioZoneHandler extends AbstractRachioThingHandler<RachioControll
 
         if (command == RefreshType.REFRESH) {
             RachioApiZone localRachioApiZone = getBridgeHandler().getZoneById(id);
-            if (localRachioApiZone == null) {
+            if (localRachioApiZone == RachioApiZone.EMPTY) {
                 return;
             }
             postChannelData(localRachioApiZone, true, channel);
@@ -126,13 +121,14 @@ public class RachioZoneHandler extends AbstractRachioThingHandler<RachioControll
                 case CHANNEL_ZONE_RUN:
                     if (command == OnOffType.ON) {
                         int runtime = getDefaultRunTime();
-                        logger.debug("Starting zone {} for {} min", rachioApiZone.name(), runtime);
+                        logger.debug("Starting zone {} for {} sec", rachioApiZone.name(), runtime);
                         api.putZoneStartWatering(id, runtime * 60);
-                        Thread.sleep(5000);
-                        getBridgeHandler().updateZoneRunning(id);
+                        getBridgeHandler().waitForState(RachioControllerHandler.DeviceState.RUN, id);
                     } else {
                         api.putStopWatering(getBridgeHandler().getId());
+                        getBridgeHandler().waitForState(RachioControllerHandler.DeviceState.STOP, null);
                     }
+                    getBridgeHandler().updateZoneRunning();
                     break;
                 case CHANNEL_ZONE_ENABLED:
                     if (command == OnOffType.ON) {
@@ -147,7 +143,7 @@ public class RachioZoneHandler extends AbstractRachioThingHandler<RachioControll
 
                     if (runtime > 0) {
                         api.putZoneStartWatering(id, runtime * 60);
-                        getBridgeHandler().updateZoneRunning(id);
+                        getBridgeHandler().updateZoneRunning();
                         logger.debug("Zone {} will start for {} min", rachioApiZone.name(), runtime);
                     }
                     break;
@@ -159,7 +155,7 @@ public class RachioZoneHandler extends AbstractRachioThingHandler<RachioControll
         }
     }
 
-    public void onStatusRefresh(RachioApiZone rachioApiZone) {
+    public void onStructureUpdate(RachioApiZone rachioApiZone) {
         if (getThing().getStatus() == ThingStatus.OFFLINE
                 && getThing().getStatusInfo().getStatusDetail() == ThingStatusDetail.COMMUNICATION_ERROR) {
             goOnline();
@@ -178,47 +174,49 @@ public class RachioZoneHandler extends AbstractRachioThingHandler<RachioControll
         return (config.defaultRunTime > 0) ? config.defaultRunTime : getBridgeHandler().getDefaultRunTime();
     }
 
-    public boolean webhookEvent(RachioApiEvent event) {
-        try {
-            switch (event.type()) {
-                case "ZONE_STATUS":
-                    switch (event.subType()) {
-                        case "ZONE_STARTED":
-                            logger.info("Zone {} STARTED watering ({}).", rachioApiZone.name(), event.timestamp());
-                            // TODO duration
-                            updateZoneRunning(true, 0);
-                            break;
-                        case "ZONE_STOPPED":
-                            logger.info(
-                                    "Zoned {} STOPPED watering (timestamp={}, current={}, duration={}sec/{}min, flowVolume={}).",
-                                    rachioApiZone.name(), event.timestamp(), event.zoneCurrent(), event.duration(),
-                                    event.durationInMinutes(), event.flowVolume());
-                            // TODO duration
-                            updateZoneRunning(false, 0);
-                            break;
-                        case "ZONE_COMPLETED":
-                        case "ZONE_CYCLING":
-                        case "ZONE_CYCLING_COMPLETED":
-                            logger.info("Event for zone {}: {} (status={}, duration = {}sec)", event.zoneName(),
-                                    event.summary(),
-                                    event.zoneRunStatus() != null ? event.zoneRunStatus().state() : "N/A",
-                                    event.duration());
-                            break;
-                    }
-                case "ZONE_DELTA":
-                    logger.info("DELTA Event for zone {}: {}.{}", rachioApiZone.name(), event.category(),
-                            event.action());
-                    break;
-                default:
-                    logger.debug("Unhandled event type {}.{} for zone {}", event.type(), event.subType(),
-                            rachioApiZone.name());
-            }
-        } catch (RuntimeException e) {
-            logger.debug("Unable to process event: {}", e.getLocalizedMessage());
-        }
-
-        return true;
-    }
+    /*
+     * public boolean webhookEvent(RachioApiEvent event) {
+     * try {
+     * switch (event.type()) {
+     * case "ZONE_STATUS":
+     * switch (event.subType()) {
+     * case "ZONE_STARTED":
+     * logger.info("Zone {} STARTED watering ({}).", rachioApiZone.name(), event.timestamp());
+     * // TODO duration
+     * updateZoneRunning(true, 0);
+     * break;
+     * case "ZONE_STOPPED":
+     * logger.info(
+     * "Zoned {} STOPPED watering (timestamp={}, current={}, duration={}sec/{}min, flowVolume={}).",
+     * rachioApiZone.name(), event.timestamp(), event.zoneCurrent(), event.duration(),
+     * event.durationInMinutes(), event.flowVolume());
+     * // TODO duration
+     * updateZoneRunning(false, 0);
+     * break;
+     * case "ZONE_COMPLETED":
+     * case "ZONE_CYCLING":
+     * case "ZONE_CYCLING_COMPLETED":
+     * logger.info("Event for zone {}: {} (status={}, duration = {}sec)", event.zoneName(),
+     * event.summary(),
+     * event.zoneRunStatus() != null ? event.zoneRunStatus().state() : "N/A",
+     * event.duration());
+     * break;
+     * }
+     * case "ZONE_DELTA":
+     * logger.info("DELTA Event for zone {}: {}.{}", rachioApiZone.name(), event.category(),
+     * event.action());
+     * break;
+     * default:
+     * logger.debug("Unhandled event type {}.{} for zone {}", event.type(), event.subType(),
+     * rachioApiZone.name());
+     * }
+     * } catch (RuntimeException e) {
+     * logger.debug("Unable to process event: {}", e.getLocalizedMessage());
+     * }
+     * 
+     * return true;
+     * }
+     */
 
     public void postChannelData(@Nullable RachioApiZone newRachioApiZone, boolean forceUpdate,
             @Nullable String updateChannel) {
