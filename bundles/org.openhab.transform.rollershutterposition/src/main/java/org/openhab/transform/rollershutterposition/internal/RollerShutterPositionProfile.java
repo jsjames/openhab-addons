@@ -101,13 +101,17 @@ public class RollerShutterPositionProfile implements StateProfile {
                 moveTo(100);
             }
         } else if (command instanceof StopMoveType) {
-            stop(true);
+            stop(false);
         } else {
             moveTo(((PercentType) command).intValue());
         }
     }
 
     private boolean isMoving() {
+        ScheduledFuture<?> lUpdateTimer = updateTimer;
+        if(lUpdateTimer == null) {
+            logger.error("isMoving() called but updateTimer is null, this should not happen");
+        }
         return (!movingSince.equals(Instant.MIN));
     }
 
@@ -161,10 +165,8 @@ public class RollerShutterPositionProfile implements StateProfile {
         this.direction = newCmd;
         this.movingSince = Instant.now();
 
-        stopTimers();
-        this.stopTimer = scheduler.schedule(stopTimeoutTask, time, TimeUnit.MILLISECONDS);
-        this.updateTimer = scheduler.scheduleWithFixedDelay(updateTimeoutTask, 0, POSITION_UPDATE_PERIOD_MILLISECONDS,
-                TimeUnit.MILLISECONDS);
+        startStopTimer(time);
+        startUpdateTimer();
 
         if (!alreadyMovingRightDirection) {
             logger.debug("moveTo() sending command for movement: {}, timer set in {} ms", direction, time);
@@ -175,13 +177,17 @@ public class RollerShutterPositionProfile implements StateProfile {
         }
     }
 
-    private void stopTimers() {
-        ScheduledFuture<?> lStopTimer = stopTimer;
-        if (lStopTimer != null) {
-            lStopTimer.cancel(true);
-            this.stopTimer = null;
+    private synchronized void startUpdateTimer() {
+        logger.trace("startUpdateTimer() called, isMoving: {}", isMoving());
+        ScheduledFuture<?> lUpdateTimer = updateTimer;
+        if(lUpdateTimer != null) {
+            this.updateTimer = scheduler.scheduleWithFixedDelay(updateTimeoutTask, 0, POSITION_UPDATE_PERIOD_MILLISECONDS,
+                    TimeUnit.MILLISECONDS);
         }
+    }
 
+    private synchronized void stopUpdateTimer() {
+        logger.trace("stopUpdateTimer() called, isMoving: {}", isMoving());
         ScheduledFuture<?> lUpdateTimer = updateTimer;
         if (lUpdateTimer != null) {
             lUpdateTimer.cancel(true);
@@ -189,23 +195,40 @@ public class RollerShutterPositionProfile implements StateProfile {
         }
     }
 
-    private void stop(boolean updatePosition) {
-        callback.handleCommand(StopMoveType.STOP);
+    private synchronized void startStopTimer(long time) {
+        logger.trace("startStopTimer() called with time: {}", time);
+        stopStopTimer(); // Ensure any previous timers are stopped before starting a new one
 
-        if(updatePosition) {
-            this.position = currentPosition();
-        }
-        this.movingSince = Instant.MIN;
-        this.targetPosition = -1; // reset target position
+        this.stopTimer = scheduler.schedule(stopTimeoutTask, time, TimeUnit.MILLISECONDS);
+    }
 
-        stopTimers();
-
-        if(updatePosition) {
-            callback.sendUpdate(new PercentType(position));
+    private synchronized void stopStopTimer() {
+        logger.trace("stopStopTimer() called, isMoving: {}", isMoving());
+        ScheduledFuture<?> lStopTimer = stopTimer;
+        if (lStopTimer != null) {
+            lStopTimer.cancel(true);
+            this.stopTimer = null;
         }
     }
 
+    private void stop(boolean handlerInitiated) {
+        logger.trace("stop() called, isMoving: {}, handlerInitiated: {}", isMoving(), handlerInitiated);
+        if(!handlerInitiated) {
+            callback.handleCommand(StopMoveType.STOP);
+        }
+
+        this.position = currentPosition();
+        this.movingSince = Instant.MIN;
+        this.targetPosition = -1; // reset target position
+
+        stopUpdateTimer();
+        stopStopTimer();
+        callback.sendUpdate(new PercentType(position));
+    }
+
     private int currentPosition() {
+        logger.trace("currentPosition() called, position: {}, targetPosition: {}, isMoving: {}", position,
+                targetPosition, isMoving());
         if (isMoving()) {
             logger.trace("currentPosition() while moving");
 
@@ -229,7 +252,9 @@ public class RollerShutterPositionProfile implements StateProfile {
     private Runnable stopTimeoutTask = new Runnable() {
         @Override
         public void run() {
+            logger.trace("stopTimeoutTask() called, isMoving: {}", isMoving());
 
+            stopUpdateTimer();
             if (targetPosition == 0 || targetPosition == 100) {
                 // Don't send stop command to re-sync position using the motor end stop
                 logger.debug("arrived at end position, not stopping for calibration");
@@ -239,12 +264,11 @@ public class RollerShutterPositionProfile implements StateProfile {
             }
 
             logger.trace("stopTimeoutTask() position: {}", targetPosition);
-            stopTimers();
 
-            movingSince = Instant.MIN;
-            position = targetPosition;
-            targetPosition = -1;
+            position = currentPosition();
             callback.sendUpdate(new PercentType(position));
+            movingSince = Instant.MIN;
+            targetPosition = -1;
         }
     };
 
@@ -252,11 +276,15 @@ public class RollerShutterPositionProfile implements StateProfile {
     private Runnable updateTimeoutTask = new Runnable() {
         @Override
         public void run() {
+            logger.trace("updateTimeoutTask() called, isMoving: {}", isMoving());
             if (isMoving()) {
                 int pos = currentPosition();
-                if (pos < 0 || pos > 100) {
-                    return;
+                if (pos <= 0  && direction == UpDownType.UP
+                        || pos >= 100 && direction == UpDownType.DOWN) {
+                    logger.debug("updateTimeoutTask() reached end position, stopping update timer");
+                    stopUpdateTimer();
                 }
+                pos = Math.max(0, Math.min(100, pos));
                 callback.sendUpdate(new PercentType(pos));
                 logger.trace("updateTimeoutTask(): {}", pos);
             }
@@ -266,44 +294,58 @@ public class RollerShutterPositionProfile implements StateProfile {
     // Handle restoreOnStartup update of the item position
     @Override
     public void onStateUpdateFromItem(State state) {
-        logger.debug("onStateUpdateFromItem() called with state: {}", state);
-        if (state instanceof PercentType) {
-            int pos = ((PercentType) state).intValue();
-            if (pos < 0 || pos > 100) {
-                logger.warn("onStateUpdateFromItem() position is invalid: {}", pos);
-                return;
+        if(!isValidConfiguration) {
+            return;
+        }
+
+        logger.debug("onStateUpdateFromItem() called with state: {}, isMoving: {}", state, isMoving());
+        if(!isMoving()) {   // don't respond to updates initiated from the profile itself
+            if (state instanceof PercentType) {
+                int pos = ((PercentType) state).intValue();
+                if (pos < 0 || pos > 100) {
+                    logger.warn("onStateUpdateFromItem() position is invalid: {}", pos);
+                    return;
+                }
+                this.position = pos;
+            } else {
+                logger.warn("onStateUpdateFromItem() received unexpected state type: {} - {}", state.getClass(), state);
             }
-            this.position = pos;
-        } else {
-            logger.warn("onStateUpdateFromItem() received unexpected state type: {}", state.getClass());
         }
     }
 
     @Override
-    public void onCommandFromHandler(Command command) {
+    public synchronized void onCommandFromHandler(Command command) {
+        if (!isValidConfiguration) {
+            return;
+        }
+
         logger.debug("onCommandFromHandler() called with command: {}", command);
+        if(command instanceof StopMoveType) {
+            stop(true);
+        } else if (command instanceof UpDownType upDownType) {
+            stopStopTimer(); // manual control
+            targetPosition = -1;
+            if(isMoving()) {
+                // update timer is already running
+                if(upDownType != direction) {
+                    logger.trace("reverse direction from {} to {}", direction, upDownType);
+                    this.position = currentPosition();
+                    this.direction = upDownType;
+                    this.movingSince = Instant.now();
+                } else {
+                    logger.trace("continue in current direction: {}", upDownType);
+                    this.position = currentPosition(); // update position to current if we are already moving in the same direction
+                }
+            } else {
+                this.direction = upDownType; // update direction to the new command if we are not already moving
+                this.movingSince = Instant.now(); // reset movingSince to now if we are not already moving
+                startUpdateTimer();
+            }
+        }
     }
 
     @Override
     public void onStateUpdateFromHandler(State state) {
         logger.debug("onStateUpdateFromHandler() called with state: {}", state);
-        if (state instanceof PercentType) {
-            int pos = ((PercentType) state).intValue();
-            if (pos < 0 || pos > 100) {
-                logger.warn("onStateUpdateFromHandler() position is invalid: {}", pos);
-                return;
-            }
-            this.position = pos;
-            callback.sendUpdate(new PercentType(position));
-
-            if(isMoving()) {
-                if(this.direction == UpDownType.UP && position <= targetPosition ||
-                        this.direction == UpDownType.DOWN && position >= targetPosition) {
-                    stop(false);
-                } 
-            }
-        } else {
-            logger.warn("onStateUpdateFromHandler() received unexpected state type: {}", state.getClass());
-        }
     }
 }
