@@ -335,6 +335,7 @@ public class RollerShutterPositionProfile implements StateProfile {
                 } else {
                     logger.trace("continue in current direction: {}", upDownType);
                     this.position = currentPosition(); // update position to current if we are already moving in the same direction
+                    this.movingSince = Instant.now();
                 }
             } else {
                 this.direction = upDownType; // update direction to the new command if we are not already moving
