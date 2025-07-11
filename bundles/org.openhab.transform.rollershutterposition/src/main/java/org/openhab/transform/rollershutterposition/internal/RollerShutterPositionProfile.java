@@ -173,6 +173,8 @@ public class RollerShutterPositionProfile implements StateProfile {
             logger.debug("moveTo() sending command for movement: {}, timer set in {} ms", direction, time);
             startUpdateTimer();
             startStopTimer(time);
+            this.movingSince = Instant.now();
+            callback.handleCommand(direction);
         }
     }
 
