@@ -60,6 +60,6 @@ public class RachioApiException extends Exception {
             message = MessageFormat.format("{0} ({1})", super.getClass().toString(), super.getMessage());
         }
 
-        return message;
+        return message == null ? "" : message;
     }
 }

@@ -50,10 +50,10 @@ import org.slf4j.LoggerFactory;
 @Component(configurationPid = "binding." + BINDING_ID, service = { ThingHandlerFactory.class,
         RachioHandlerFactory.class }, immediate = true)
 public class RachioHandlerFactory extends BaseThingHandlerFactory {
-    private static final Set<ThingTypeUID> SUPPORTED_THING_TYPES_UIDS = Set.of(THING_TYPE_CLOUD, THING_TYPE_CONTROLLER,
-            THING_TYPE_ZONE, THING_TYPE_BASE_STATION, THING_TYPE_VALVE);
+    private static final Set<ThingTypeUID> SUPPORTED_THING_TYPES_UIDS = Objects.requireNonNull(Set.of(THING_TYPE_CLOUD,
+            THING_TYPE_CONTROLLER, THING_TYPE_ZONE, THING_TYPE_BASE_STATION, THING_TYPE_VALVE));
 
-    private final Logger logger = LoggerFactory.getLogger(RachioHandlerFactory.class);
+    private final Logger logger = Objects.requireNonNull(LoggerFactory.getLogger(RachioHandlerFactory.class));
     private final HttpClientFactory httpClientFactory;
     private final HttpService httpService;
 
@@ -88,6 +88,11 @@ public class RachioHandlerFactory extends BaseThingHandlerFactory {
             }
 
             String id = thing.getConfiguration().get(PARAM_ID).toString();
+            if (id == null || id.isEmpty()) {
+                logger.debug("RachioHandlerFactory: Unable to create thing handler - no id configured.");
+                return null;
+            }
+
             if (THING_TYPE_CONTROLLER.equals(thingTypeUID)) {
                 return new RachioControllerHandler((Bridge) thing, new RachioId.Device(id),
                         lRachioBridgeHandler.getApi(), Objects.requireNonNull(cloudConnectorHandler));

@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -47,9 +48,9 @@ import org.openhab.binding.rachio.internal.api.dto.RachioApiValve;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiWebhook;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiZone;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiZoneRun;
+import org.openhab.binding.rachio.utils.ArrayToMapDeserializer;
 import org.openhab.binding.rachio.utils.ClientRateLimitManager;
 import org.openhab.binding.rachio.utils.ClientRateLimitManager.RateLimitThrottleException;
-import org.openhab.binding.rachio.utils.JsonArrayToMapSerializer;
 import org.openhab.core.library.types.RawType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,7 +73,7 @@ import com.google.gson.reflect.TypeToken;
  */
 @NonNullByDefault
 public class RachioApi {
-    private final Logger logger = LoggerFactory.getLogger(RachioApi.class);
+    private final Logger logger = Objects.requireNonNull(LoggerFactory.getLogger(RachioApi.class));
 
     private static final String APIURL_BASE = "https://api.rach.io/1/public/";
     private static final String APIURL_BASE2 = "https://cloud-rest.rach.io/";
@@ -144,44 +145,38 @@ public class RachioApi {
             @Nullable JsonDeserializationContext context) -> json == null ? null : Instant.parse(json.getAsString());
 
     // deserialize JsonArrays to HashMaps with the id as key
-    private final Gson gson = new GsonBuilder() //
+    private final Gson gson = Objects.requireNonNull(new GsonBuilder() //
             .registerTypeAdapter(Date.class, dateDeserializer) //
             .registerTypeAdapter(Instant.class, instantDeserializer) //
             .registerTypeAdapter(RachioId.Person.class,
-                    new RachioId.RachioIdGsonAdpater<RachioId.Person>(RachioId.Person.class)) //
+                    new RachioId.RachioIdGsonAdapter<RachioId.Person>(RachioId.Person.class)) //
             .registerTypeAdapter(RachioId.Zone.class,
-                    new RachioId.RachioIdGsonAdpater<RachioId.Zone>(RachioId.Zone.class)) //
+                    new RachioId.RachioIdGsonAdapter<RachioId.Zone>(RachioId.Zone.class)) //
             .registerTypeAdapter(RachioId.Device.class,
-                    new RachioId.RachioIdGsonAdpater<RachioId.Device>(RachioId.Device.class)) //
+                    new RachioId.RachioIdGsonAdapter<RachioId.Device>(RachioId.Device.class)) //
             .registerTypeAdapter(RachioId.Webhook.class,
-                    new RachioId.RachioIdGsonAdpater<RachioId.Webhook>(RachioId.Webhook.class)) //
+                    new RachioId.RachioIdGsonAdapter<RachioId.Webhook>(RachioId.Webhook.class)) //
             .registerTypeAdapter(RachioId.BaseStation.class,
-                    new RachioId.RachioIdGsonAdpater<RachioId.BaseStation>(RachioId.BaseStation.class)) //
+                    new RachioId.RachioIdGsonAdapter<RachioId.BaseStation>(RachioId.BaseStation.class)) //
             .registerTypeAdapter(RachioId.Valve.class,
-                    new RachioId.RachioIdGsonAdpater<RachioId.Valve>(RachioId.Valve.class)) //
+                    new RachioId.RachioIdGsonAdapter<RachioId.Valve>(RachioId.Valve.class)) //
             .registerTypeAdapter(RachioId.Program.class,
-                    new RachioId.RachioIdGsonAdpater<RachioId.Program>(RachioId.Program.class)) //
+                    new RachioId.RachioIdGsonAdapter<RachioId.Program>(RachioId.Program.class)) //
             .registerTypeAdapter(RachioId.Schedule.class,
-                    new RachioId.RachioIdGsonAdpater<RachioId.Schedule>(RachioId.Schedule.class)) //
+                    new RachioId.RachioIdGsonAdapter<RachioId.Schedule>(RachioId.Schedule.class)) //
             .registerTypeAdapter(RachioApiEvent.class, new RachioApiEvent.GsonAdapter()) //
             .registerTypeAdapter(RachioApiWebhook.class, new RachioApiWebhook.GsonAdapter()) //
             .registerTypeAdapter(new TypeToken<Map<RachioId.Device, RachioApiDevice>>() {
-            }.getType(),
-                    new JsonArrayToMapSerializer<RachioId.Device, RachioApiDevice>(RachioApiDevice::id, RachioApiDevice.class)) //
+            }.getType(), ArrayToMapDeserializer.forArrayToMap(RachioApiDevice::id, RachioApiDevice.class)) //
             .registerTypeAdapter(new TypeToken<Map<RachioId.Zone, RachioApiZone>>() {
-            }.getType(), new JsonArrayToMapSerializer<RachioId.Zone, RachioApiZone>(RachioApiZone::id, RachioApiZone.class)) //
+            }.getType(), ArrayToMapDeserializer.forArrayToMap(RachioApiZone::id, RachioApiZone.class)) //
             .registerTypeAdapter(new TypeToken<Map<RachioId.Schedule, RachioApiScheduleRule>>() {
-            }.getType(),
-                    new JsonArrayToMapSerializer<RachioId.Schedule, RachioApiScheduleRule>(RachioApiScheduleRule::id,
-                            RachioApiScheduleRule.class)) //
+            }.getType(), ArrayToMapDeserializer.forArrayToMap(RachioApiScheduleRule::id, RachioApiScheduleRule.class)) //
             .registerTypeAdapter(new TypeToken<Map<RachioId.Valve, RachioApiValve>>() {
-            }.getType(),
-                    new JsonArrayToMapSerializer<RachioId.Valve, RachioApiValve>(RachioApiValve::id, RachioApiValve.class)) //
+            }.getType(), ArrayToMapDeserializer.forArrayToMap(RachioApiValve::id, RachioApiValve.class)) //
             .registerTypeAdapter(new TypeToken<Map<RachioId.BaseStation, RachioApiBaseStation>>() {
-            }.getType(),
-                    new JsonArrayToMapSerializer<RachioId.BaseStation, RachioApiBaseStation>(RachioApiBaseStation::id,
-                            RachioApiBaseStation.class)) //
-            .create();
+            }.getType(), ArrayToMapDeserializer.forArrayToMap(RachioApiBaseStation::id, RachioApiBaseStation.class)) //
+            .create());
     private HttpClient httpClient;
 
     public RachioApi(final HttpClient httpClient) {
@@ -206,8 +201,13 @@ public class RachioApi {
         ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
 
         JsonObject jsonResponse = JsonParser.parseString(response.getContentAsString()).getAsJsonObject();
+        String idString = jsonResponse.has("id") ? jsonResponse.get("id").getAsString() : null;
 
-        return new RachioId.Person(jsonResponse.get("id").getAsString());
+        if (idString == null || idString.isEmpty()) {
+            throw new RachioApiException("No person ID returned", false);
+        }
+
+        return new RachioId.Person(idString);
     }
 
     public RachioApiPerson getPerson(RachioId.Person personId) throws InterruptedException, TimeoutException,
@@ -406,7 +406,14 @@ public class RachioApi {
             return null;
         }
 
-        return new RawType(response.getContent(), response.getMediaType());
+        byte content[] = response.getContent();
+        if (content == null || content.length == 0) {
+            logger.error("No image content retrieved from {}", url);
+            return null;
+        }
+
+        String mediaType = response.getMediaType();
+        return new RawType(content, mediaType != null ? mediaType : "application/octet-stream");
     }
 
     /*
@@ -624,9 +631,13 @@ public class RachioApi {
         request.header(HttpHeader.ACCEPT, CONTENT_TYPE_JSON);
     }
 
-    private synchronized ContentResponse sendRequest(Request request, ClientRateLimitManager.PRIORITY priority)
-            throws InterruptedException, TimeoutException, ExecutionException, RachioApiException,
-            RateLimitThrottleException {
+    private synchronized ContentResponse sendRequest(@Nullable Request request,
+            ClientRateLimitManager.PRIORITY priority) throws InterruptedException, TimeoutException, ExecutionException,
+            RachioApiException, RateLimitThrottleException {
+
+        if (request == null) {
+            throw new RachioApiException("Request is null", false);
+        }
 
         rateLimitManager.tryThrottle(priority);
 
@@ -643,7 +654,9 @@ public class RachioApi {
             String rateResetString = httpFields.get(RACHIO_JSON_RATE_RESET); // new API adds [UTC] to this string
             Instant rateReset = Instant.parse(rateResetString.substring(0, rateResetString.indexOf("Z") + 1));
 
-            rateLimitManager.updateRateLimit(rateLimitCap, rateRemaining, rateReset);
+            if (rateReset != null) {
+                rateLimitManager.updateRateLimit(rateLimitCap, rateRemaining, rateReset);
+            }
         } else {
             rateLimitManager.logRequest();
         }

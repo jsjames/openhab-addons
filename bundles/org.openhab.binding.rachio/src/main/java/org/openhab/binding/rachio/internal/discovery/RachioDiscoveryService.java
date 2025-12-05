@@ -14,6 +14,7 @@ package org.openhab.binding.rachio.internal.discovery;
 
 import static org.openhab.binding.rachio.internal.RachioBindingConstants.*;
 
+import java.util.Objects;
 import java.util.Set;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
@@ -39,8 +40,8 @@ import org.openhab.core.thing.ThingUID;
  */
 @NonNullByDefault
 public class RachioDiscoveryService extends AbstractThingHandlerDiscoveryService<RachioCloudConnectorHandler> {
-    private static final Set<ThingTypeUID> DISCOVERABLE_THING_TYPE_UIDS = Set.of(THING_TYPE_CONTROLLER, THING_TYPE_ZONE,
-            THING_TYPE_BASE_STATION, THING_TYPE_VALVE);
+    private static final Set<ThingTypeUID> DISCOVERABLE_THING_TYPE_UIDS = Objects
+            .requireNonNull(Set.of(THING_TYPE_CONTROLLER, THING_TYPE_ZONE, THING_TYPE_BASE_STATION, THING_TYPE_VALVE));
 
     @Override
     public void initialize() {
@@ -60,7 +61,7 @@ public class RachioDiscoveryService extends AbstractThingHandlerDiscoveryService
 
     @Override
     protected synchronized void startScan() {
-        removeOlderResults(System.currentTimeMillis());
+        removeOlderResults(getTimestampOfLastScan());
         if (thingHandler.getThing().getStatus() == ThingStatus.ONLINE) {
             thingHandler.refreshStructure();
         }

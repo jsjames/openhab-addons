@@ -15,10 +15,13 @@ package org.openhab.binding.rachio.utils;
 import java.lang.reflect.Type;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
@@ -68,38 +71,46 @@ import com.google.gson.JsonParseException;
  * @param <V> the type of mapped values (elements of the JSON array)
  */
 @NonNullByDefault
-public class JsonArrayToMapSerializer<K, V> implements JsonDeserializer<Map<K, V>> {
-    private final Function<V, K> keyFunc;
-    private final Class<V> clazzV;
+public class JsonArrayToMapDeserializer<K, V> implements JsonDeserializer<Map<K, V>> {
+    private final Function<V, K> keyExtractor;
+    private final Class<V> valueClass;
 
-    public JsonArrayToMapSerializer(Function<V, K> keyFunc, Class<V> clazzV) {
-        this.keyFunc = keyFunc;
-        this.clazzV = clazzV;
+    private final Logger logger = Objects.requireNonNull(LoggerFactory.getLogger(JsonArrayToMapDeserializer.class));
+
+    public JsonArrayToMapDeserializer(Function<V, K> keyExtractor, Class<V> valueClass) {
+        this.keyExtractor = keyExtractor;
+        this.valueClass = valueClass;
     }
 
     @Override
     public Map<K, V> deserialize(@Nullable JsonElement json, @Nullable Type typeOfT,
             @Nullable JsonDeserializationContext context) throws JsonParseException {
-        if (json == null || !json.isJsonArray() || context == null) {
+        if (json == null || !json.isJsonArray()) {
             throw new JsonParseException("Expected JSON array");
         }
+        if (context == null) {
+            throw new JsonParseException("Deserialization context cannont be null");
+        }
 
-        HashMap<K, V> hashMap = new HashMap<>();
+        HashMap<K, V> resultMap = new HashMap<>();
 
         for (JsonElement element : json.getAsJsonArray()) {
             @Nullable
-            V v = context.deserialize(element, clazzV);
+            V v = context.deserialize(element, valueClass);
             if (v != null) {
                 K k;
                 try {
-                    k = keyFunc.apply(v);
+                    k = keyExtractor.apply(v);
+                    if (resultMap.containsKey(k)) {
+                        logger.warn("Duplicate key '{}' found, overwriting previous value", k);
+                    }
                 } catch (IllegalArgumentException | SecurityException e) {
-                    throw new JsonParseException(e.getCause());
+                    throw new JsonParseException("Key extraction failed" + e.getMessage());
                 }
-                hashMap.put(k, v);
+                resultMap.put(k, v);
             }
         }
 
-        return hashMap;
+        return resultMap;
     }
 }

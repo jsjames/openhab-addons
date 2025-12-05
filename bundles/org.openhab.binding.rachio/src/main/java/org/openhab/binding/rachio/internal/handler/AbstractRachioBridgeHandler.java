@@ -27,7 +27,6 @@ import org.openhab.core.thing.ThingStatus;
 import org.openhab.core.thing.ThingStatusDetail;
 import org.openhab.core.thing.ThingStatusInfo;
 import org.openhab.core.thing.binding.BaseBridgeHandler;
-import org.openhab.core.thing.binding.BridgeHandler;
 import org.openhab.core.thing.binding.ThingHandler;
 
 /**
@@ -107,7 +106,7 @@ public abstract class AbstractRachioBridgeHandler<BH extends BaseBridgeHandler, 
             return false;
         }
 
-        BH bridgeHandler = (BH) bridge.getHandler();
+        BH bridgeHandler = getBridgeHandler();
         if (bridgeHandler == null) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_UNINITIALIZED);
             return false;
@@ -122,11 +121,9 @@ public abstract class AbstractRachioBridgeHandler<BH extends BaseBridgeHandler, 
     }
 
     @SuppressWarnings("unchecked")
-    public BH getBridgeHandler() {
+    public @Nullable BH getBridgeHandler() {
         Bridge bridge = Objects.requireNonNull(getBridge(), "Invalid state, no bridge");
-        BridgeHandler handler = Objects.requireNonNull(bridge.getHandler(), "Invalid state, no bridge handler");
-
-        return (BH) handler;
+        return (BH) bridge.getHandler();
     }
 
     public ID getId() {

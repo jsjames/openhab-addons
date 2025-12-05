@@ -14,8 +14,10 @@ package org.openhab.binding.rachio.internal.api;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Type;
+import java.util.Objects;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
+import org.eclipse.jdt.annotation.Nullable;
 
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
@@ -36,37 +38,43 @@ public class RachioId {
     }
 
     public record Device(String idString) implements Id {
+        public static final Device EMPTY = new Device("");
     }
 
     public record Zone(String idString) implements Id {
-        static public final Zone EMPTY = new Zone("");
+        public static final Zone EMPTY = new Zone("");
     }
 
     public record Schedule(String idString) implements Id {
+        public static final Schedule EMPTY = new Schedule("");
     }
 
     public record Event(String idString) implements Id {
+        public static final Event EMPTY = new Event("");
     }
 
     public record Person(String idString) implements Id {
-        static public final Person EMPTY = new Person("");
+        public static final Person EMPTY = new Person("");
     }
 
     public record Webhook(String idString) implements Id {
-        static public final Webhook EMPTY = new Webhook("");
+        public static final Webhook EMPTY = new Webhook("");
     }
 
     public record Program(String idString) implements Id {
+        public static final Program EMPTY = new Program("");
     }
 
     public record Valve(String idString) implements Id {
+        public static final Valve EMPTY = new Valve("");
     }
 
     public record BaseStation(String idString) implements Id {
+        public static final BaseStation EMPTY = new BaseStation("");
     }
 
     public static RachioId.Id create(String type, String idString) {
-        return switch (type.toUpperCase()) {
+        return switch (type.toUpperCase().trim()) {
             case "DEVICE" -> new Device(idString);
             case "ZONE" -> new Zone(idString);
             case "SCHEDULE" -> new Schedule(idString);
@@ -80,31 +88,38 @@ public class RachioId {
         };
     }
 
-    public static class RachioIdGsonAdpater<T> implements JsonDeserializer<T>, JsonSerializer<T> {
+    public static class RachioIdGsonAdapter<T extends Id> implements JsonDeserializer<T>, JsonSerializer<T> {
         private final Class<T> clazz;
 
-        public RachioIdGsonAdpater(Class<T> clazz) {
-            this.clazz = clazz;
+        public RachioIdGsonAdapter(Class<T> clazz) {
+            this.clazz = Objects.requireNonNull(clazz, "Class cannot be null");
         }
 
         @Override
-        public T deserialize(JsonElement json, Type typeOfT, JsonDeserializationContext context)
-                throws JsonParseException {
+        public T deserialize(@Nullable JsonElement json, @Nullable Type typeOfT,
+                @Nullable JsonDeserializationContext context) throws JsonParseException {
+            if (json == null || !json.isJsonPrimitive()) {
+                throw new JsonParseException(
+                        "Expected JSON primitive, got: " + (json == null ? "null" : json.getClass().getSimpleName()));
+            }
+
             try {
-                return (T) clazz.getDeclaredConstructor(String.class).newInstance(json.getAsString());
+                return clazz.getDeclaredConstructor(String.class).newInstance(json.getAsString());
             } catch (InstantiationException | IllegalAccessException | InvocationTargetException
                     | NoSuchMethodException e) {
-                throw new JsonParseException("Unable to parse JSON");
+                throw new JsonParseException(
+                        "Failed to deserialize " + clazz.getSimpleName() + " from JSON: " + e.getMessage(), e);
             }
         }
 
         @Override
-        public JsonElement serialize(T src, Type typeOfSrc, JsonSerializationContext context) {
-            if (src instanceof Id id) {
-                return context.serialize(id.idString());
-            } else {
+        @Nullable
+        public JsonElement serialize(T src, @Nullable Type typeOfSrc, @Nullable JsonSerializationContext context) {
+            if (context == null) {
                 throw new JsonParseException("Unable to serialize JSON");
             }
+
+            return context.serialize(src.idString());
         }
     }
 }
