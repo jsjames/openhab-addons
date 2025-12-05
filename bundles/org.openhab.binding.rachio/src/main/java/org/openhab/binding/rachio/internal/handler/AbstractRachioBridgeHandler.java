@@ -107,11 +107,6 @@ public abstract class AbstractRachioBridgeHandler<BH extends BaseBridgeHandler, 
         }
 
         BH bridgeHandler = getBridgeHandler();
-        if (bridgeHandler == null) {
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_UNINITIALIZED);
-            return false;
-        }
-
         if (bridgeHandler.getThing().getStatus() != ThingStatus.ONLINE) {
             updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.BRIDGE_OFFLINE);
             return false;
@@ -121,7 +116,7 @@ public abstract class AbstractRachioBridgeHandler<BH extends BaseBridgeHandler, 
     }
 
     @SuppressWarnings("unchecked")
-    public @Nullable BH getBridgeHandler() {
+    public BH getBridgeHandler() {
         Bridge bridge = Objects.requireNonNull(getBridge(), "Invalid state, no bridge");
         return (BH) bridge.getHandler();
     }

@@ -13,7 +13,7 @@
 package org.openhab.binding.rachio.internal.handler;
 
 import static org.openhab.binding.rachio.internal.RachioBindingConstants.*;
-import static org.openhab.binding.rachio.internal.RachioUtils.isUpdateRequired;
+import static org.openhab.binding.rachio.internal.utils.RachioUtils.isUpdateRequired;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -27,7 +27,7 @@ import org.openhab.binding.rachio.internal.api.RachioApiException;
 import org.openhab.binding.rachio.internal.api.RachioId;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiZone;
 import org.openhab.binding.rachio.internal.configuration.RachioZoneConfiguration;
-import org.openhab.binding.rachio.utils.ClientRateLimitManager.RateLimitThrottleException;
+import org.openhab.binding.rachio.internal.utils.ClientRateLimitManager.RateLimitThrottleException;
 import org.openhab.core.library.types.DateTimeType;
 import org.openhab.core.library.types.DecimalType;
 import org.openhab.core.library.types.OnOffType;

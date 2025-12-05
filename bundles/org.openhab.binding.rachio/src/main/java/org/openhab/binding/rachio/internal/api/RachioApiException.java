@@ -15,6 +15,7 @@ package org.openhab.binding.rachio.internal.api;
 import java.net.MalformedURLException;
 import java.net.UnknownHostException;
 import java.text.MessageFormat;
+import java.util.Objects;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
@@ -44,7 +45,7 @@ public class RachioApiException extends Exception {
 
     @Override
     public String toString() {
-        String message = super.getMessage();
+        String message = Objects.requireNonNull(super.getMessage());
         Throwable ex = e;
         if (ex != null) {
             if (ex.getClass() == UnknownHostException.class) {

@@ -13,7 +13,7 @@
 package org.openhab.binding.rachio.internal.handler;
 
 import static org.openhab.binding.rachio.internal.RachioBindingConstants.*;
-import static org.openhab.binding.rachio.internal.RachioUtils.isUpdateRequired;
+import static org.openhab.binding.rachio.internal.utils.RachioUtils.isUpdateRequired;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -25,13 +25,13 @@ import java.util.concurrent.TimeoutException;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.binding.rachio.internal.RachioBindingConstants;
-import org.openhab.binding.rachio.internal.RachioUtils;
 import org.openhab.binding.rachio.internal.api.RachioApi;
 import org.openhab.binding.rachio.internal.api.RachioApiException;
 import org.openhab.binding.rachio.internal.api.RachioId;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiEvent;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiValve;
-import org.openhab.binding.rachio.utils.ClientRateLimitManager.RateLimitThrottleException;
+import org.openhab.binding.rachio.internal.utils.ClientRateLimitManager.RateLimitThrottleException;
+import org.openhab.binding.rachio.internal.utils.RachioUtils;
 import org.openhab.core.library.types.OnOffType;
 import org.openhab.core.library.types.QuantityType;
 import org.openhab.core.library.types.RawType;

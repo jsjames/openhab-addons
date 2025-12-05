@@ -16,18 +16,20 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Type;
 import java.util.Objects;
 
+import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonNull;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
 
 /**
- * The {@link RachioId} used to in type-checking the Rachio IDs
+ * The {@link RachioId} used to support type-checking for Rachio IDs
  *
  * @author Jeff James - Initial contribution
  */
@@ -37,39 +39,39 @@ public class RachioId {
         String idString();
     }
 
-    public record Device(String idString) implements Id {
+    public record Device(@NonNull String idString) implements Id {
         public static final Device EMPTY = new Device("");
     }
 
-    public record Zone(String idString) implements Id {
+    public record Zone(@NonNull String idString) implements Id {
         public static final Zone EMPTY = new Zone("");
     }
 
-    public record Schedule(String idString) implements Id {
+    public record Schedule(@NonNull String idString) implements Id {
         public static final Schedule EMPTY = new Schedule("");
     }
 
-    public record Event(String idString) implements Id {
+    public record Event(@NonNull String idString) implements Id {
         public static final Event EMPTY = new Event("");
     }
 
-    public record Person(String idString) implements Id {
+    public record Person(@NonNull String idString) implements Id {
         public static final Person EMPTY = new Person("");
     }
 
-    public record Webhook(String idString) implements Id {
+    public record Webhook(@NonNull String idString) implements Id {
         public static final Webhook EMPTY = new Webhook("");
     }
 
-    public record Program(String idString) implements Id {
+    public record Program(@NonNull String idString) implements Id {
         public static final Program EMPTY = new Program("");
     }
 
-    public record Valve(String idString) implements Id {
+    public record Valve(@NonNull String idString) implements Id {
         public static final Valve EMPTY = new Valve("");
     }
 
-    public record BaseStation(String idString) implements Id {
+    public record BaseStation(@NonNull String idString) implements Id {
         public static final BaseStation EMPTY = new BaseStation("");
     }
 
@@ -104,7 +106,8 @@ public class RachioId {
             }
 
             try {
-                return clazz.getDeclaredConstructor(String.class).newInstance(json.getAsString());
+                T result = clazz.getDeclaredConstructor(String.class).newInstance(json.getAsString());
+                return Objects.requireNonNull(result, "Deserialized RachioId cannot be null");
             } catch (InstantiationException | IllegalAccessException | InvocationTargetException
                     | NoSuchMethodException e) {
                 throw new JsonParseException(
@@ -113,13 +116,14 @@ public class RachioId {
         }
 
         @Override
-        @Nullable
         public JsonElement serialize(T src, @Nullable Type typeOfSrc, @Nullable JsonSerializationContext context) {
             if (context == null) {
                 throw new JsonParseException("Unable to serialize JSON");
             }
 
-            return context.serialize(src.idString());
+            JsonElement jsonElement = context.serialize(src.idString());
+
+            return (jsonElement != null) ? jsonElement : Objects.requireNonNull(JsonNull.INSTANCE);
         }
     }
 }

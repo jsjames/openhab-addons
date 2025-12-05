@@ -11,7 +11,7 @@
  * SPDX-License-Identifier: EPL-2.0
  */
 
-package org.openhab.binding.rachio.utils;
+package org.openhab.binding.rachio.internal.utils;
 
 import java.time.Duration;
 import java.time.Instant;

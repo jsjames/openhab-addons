@@ -10,7 +10,7 @@
  *
  * SPDX-License-Identifier: EPL-2.0
  */
-package org.openhab.binding.rachio.utils;
+package org.openhab.binding.rachio.internal.utils;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;

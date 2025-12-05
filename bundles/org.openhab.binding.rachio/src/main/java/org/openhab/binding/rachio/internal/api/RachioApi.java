@@ -48,9 +48,9 @@ import org.openhab.binding.rachio.internal.api.dto.RachioApiValve;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiWebhook;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiZone;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiZoneRun;
-import org.openhab.binding.rachio.utils.ArrayToMapDeserializer;
-import org.openhab.binding.rachio.utils.ClientRateLimitManager;
-import org.openhab.binding.rachio.utils.ClientRateLimitManager.RateLimitThrottleException;
+import org.openhab.binding.rachio.internal.utils.ArrayToMapDeserializer;
+import org.openhab.binding.rachio.internal.utils.ClientRateLimitManager;
+import org.openhab.binding.rachio.internal.utils.ClientRateLimitManager.RateLimitThrottleException;
 import org.openhab.core.library.types.RawType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -654,9 +654,7 @@ public class RachioApi {
             String rateResetString = httpFields.get(RACHIO_JSON_RATE_RESET); // new API adds [UTC] to this string
             Instant rateReset = Instant.parse(rateResetString.substring(0, rateResetString.indexOf("Z") + 1));
 
-            if (rateReset != null) {
-                rateLimitManager.updateRateLimit(rateLimitCap, rateRemaining, rateReset);
-            }
+            rateLimitManager.updateRateLimit(rateLimitCap, rateRemaining, rateReset);
         } else {
             rateLimitManager.logRequest();
         }

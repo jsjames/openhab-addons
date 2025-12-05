@@ -88,7 +88,7 @@ public class RachioHandlerFactory extends BaseThingHandlerFactory {
             }
 
             String id = thing.getConfiguration().get(PARAM_ID).toString();
-            if (id == null || id.isEmpty()) {
+            if (id.isEmpty()) {
                 logger.debug("RachioHandlerFactory: Unable to create thing handler - no id configured.");
                 return null;
             }

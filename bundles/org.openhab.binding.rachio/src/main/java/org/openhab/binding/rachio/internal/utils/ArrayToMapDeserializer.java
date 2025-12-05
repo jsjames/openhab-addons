@@ -1,4 +1,16 @@
-package org.openhab.binding.rachio.utils;
+/*
+ * Copyright (c) 2010-2025 Contributors to the openHAB project
+ *
+ * See the NOTICE file(s) distributed with this work for additional
+ * information.
+ *
+ * This program and the accompanying materials are made available under the
+ * terms of the Eclipse Public License 2.0 which is available at
+ * http://www.eclipse.org/legal/epl-2.0
+ *
+ * SPDX-License-Identifier: EPL-2.0
+ */
+package org.openhab.binding.rachio.internal.utils;
 
 import java.lang.reflect.Type;
 import java.util.Map;
@@ -6,7 +18,6 @@ import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 
@@ -64,8 +75,6 @@ public class ArrayToMapDeserializer {
         }
 
         try {
-            @SuppressWarnings("null")
-            @NonNull
             Map<K, V> result = json.getAsJsonArray().asList().stream()
                     .map(element -> context.<V> deserialize(element, valueClass)).filter(Objects::nonNull)
                     .filter(value -> {
