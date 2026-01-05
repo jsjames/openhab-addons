@@ -14,10 +14,12 @@ package org.openhab.binding.rachio.internal.api.dto;
 
 import java.lang.reflect.Type;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.eclipse.jdt.annotation.NonNull;
 import org.openhab.binding.rachio.internal.api.RachioId;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
@@ -48,13 +50,15 @@ public record RachioApiWebhook( //
             RachioId.Webhook id = context.deserialize(jsonObject.get("id"), RachioId.Webhook.class);
             String externalId = context.deserialize(jsonObject.get("externalId"), String.class);
             String url = context.deserialize(jsonObject.get("url"), String.class);
-            List<String> eventTypes = context.deserialize(jsonObject.get("eventTypes"), List.class);
 
-            JsonObject resourceIdObject = jsonObject.getAsJsonObject("resourceId");
-
-            if (resourceIdObject == null) {
-                throw new JsonParseException("Resource ID is missing or null");
+            JsonArray eventTypesArray = jsonObject.getAsJsonArray("eventTypes");
+            List<?> eventTypes = context.deserialize(eventTypesArray, List.class);
+            if(!(eventTypes.get(0) instanceof String)) {
+                eventTypes = eventTypes.stream().map((e) -> ((JsonElement) e).getAsJsonObject().get("name").getAsString()).collect(Collectors.toList());
             }
+
+            // resoureIdObject does not exist as a field in notification style webhooks
+            JsonObject resourceIdObject = jsonObject.getAsJsonObject("resourceId");
 
             // convert separate parameters of resourceId field to a RachioId.Id type
             RachioId.Id resourceId = null;
@@ -67,7 +71,9 @@ public record RachioApiWebhook( //
                 resourceId = context.deserialize(resourceIdObject.get("program_id"), RachioId.Program.class);
             }
 
-            return new RachioApiWebhook(id, externalId, resourceId, url, eventTypes);
+            @SuppressWarnings("unchecked")
+            List<@NonNull String> eventTypesCasted = (List<@NonNull String>) eventTypes;
+            return new RachioApiWebhook(id, externalId, resourceId, url, eventTypesCasted);
         }
 
         public JsonElement serialize(RachioApiWebhook src, Type typeOfSrc, JsonSerializationContext context) {

@@ -109,8 +109,8 @@ public class RachioBindingConstants {
     public static final String CHANNEL_LAST_EVENTTS = "lastEventTime";
 
     // Default for config options / thing settings
-    public static int DEFAULT_POLLING_INTERVAL_SEC = 120;
-    public static int DEFAULT_ZONE_RUNTIME_SEC = 300;
+    public static final int DEFAULT_POLLING_INTERVAL_SEC = 120;
+    public static final int DEFAULT_ZONE_RUNTIME_SEC = 300;
     public static final int HTTP_TIMOUT_MS = 15000;
 
     // --------------- Rachio Cloud API

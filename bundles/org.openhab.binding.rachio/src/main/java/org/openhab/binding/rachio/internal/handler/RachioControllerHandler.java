@@ -34,6 +34,7 @@ import org.openhab.binding.rachio.internal.RachioBindingConstants;
 import org.openhab.binding.rachio.internal.api.RachioApi;
 import org.openhab.binding.rachio.internal.api.RachioApiException;
 import org.openhab.binding.rachio.internal.api.RachioId;
+import org.openhab.binding.rachio.internal.api.RachioWebhookServlet;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiCurrentSchedule;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiDevice;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiEvent;
@@ -62,6 +63,7 @@ import org.openhab.core.thing.ThingStatusDetail;
 import org.openhab.core.types.Command;
 import org.openhab.core.types.RefreshType;
 import org.openhab.core.types.UnDefType;
+import org.osgi.service.http.HttpService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -83,6 +85,10 @@ public class RachioControllerHandler
 
     RachioApiDevice apiDevice = RachioApiDevice.EMPTY;
     RachioId.Webhook webhookId = RachioId.Webhook.EMPTY;
+
+    @Nullable
+    private RachioWebhookServlet rachioWebhookServlet;
+    private final HttpService httpService;
 
     public enum DeviceState {
         STOP,
@@ -116,8 +122,9 @@ public class RachioControllerHandler
     private boolean pollingMode;
 
     public RachioControllerHandler(final Bridge thing, final RachioId.Device deviceId, final RachioApi api,
-            final RachioCloudConnectorHandler cloudConnectorHandler) {
+            final RachioCloudConnectorHandler cloudConnectorHandler, final HttpService httpService) {
         super(thing, deviceId, api, cloudConnectorHandler);
+        this.httpService = httpService;
         config = getConfigAs(RachioControllerConfiguration.class);
     }
 
@@ -132,7 +139,7 @@ public class RachioControllerHandler
             return;
         }
 
-        this.pollingMode = getCloudConnectorHandler().isPollingMode();
+        this.pollingMode = !config.webhookCallbackUrl.isBlank();
 
         RachioApiDevice rachioApiDevice = getBridgeHandler().getDeviceById(id);
         if (rachioApiDevice == null) {
@@ -146,8 +153,10 @@ public class RachioControllerHandler
         updateZoneStructure(rachioApiDevice.zones());
 
         if (!pollingMode) {
+            rachioWebhookServlet = new RachioWebhookServlet(httpService, this, api);
+
             try {
-                webhookId = getBridgeHandler().registerWebhook(id);
+                webhookId = registerNotificationWebhook();
             } catch (RachioApiException | InterruptedException | TimeoutException | ExecutionException
                     | RateLimitThrottleException e) {
                 logger.error("Unable to create webhook");
@@ -197,7 +206,7 @@ public class RachioControllerHandler
             InterruptedException, TimeoutException, ExecutionException, RateLimitThrottleException {
         List<RachioApiWebhook> webhooks = api.getListWebhook(id);
 
-        String callbackUrl = RachioUtils.enocdeUri(getBridgeHandler().getCallbackUrl());
+        String callbackUrl = RachioUtils.enocdeUri(config.webhookCallbackUrl);
 
         logger.debug("Registered webhooks for device '{}': {}", id, webhooks.toString());
         for (RachioApiWebhook webhook : webhooks) {
@@ -706,5 +715,38 @@ public class RachioControllerHandler
             return RachioApiZone.EMPTY;
         }
         return zone;
+    }
+
+    /**
+     * {@link registerWebhook} will check to see if existing webhook exists and deletes.
+     * Then, will create new webhook for this device.
+     * 
+     * @param externalId
+     * @throws RateLimitThrottleException
+     * @throws RachioApiException
+     */
+    public RachioId.Webhook registerNotificationWebhook() throws InterruptedException, TimeoutException,
+            ExecutionException, RachioApiException, RateLimitThrottleException {
+        String callbackUrl = RachioUtils.enocdeUri(config.webhookCallbackUrl);
+        String externalId = getExternalId();
+
+        List<RachioApiWebhook> webhooks = api.getNotificationDeviceWebhook(id);
+        logger.debug("Registered webhooks for device '{}': {}", id, webhooks.toString());
+
+        // Delete webhook if one already exists for this callback URL
+        for (RachioApiWebhook webhook : webhooks) {
+            logger.debug("Webhook: id='{}', url='{}', externalId='{}'", webhook.id(), webhook.url(),
+                    webhook.externalId());
+            if (webhook.url().equals(callbackUrl.toString()) && webhook.externalId().equals(externalId)) {
+                logger.debug("The callback url '{}' is already registered -> delete", webhook.url());
+                api.deleteNotificationWebhook(webhook.id());
+            }
+        }
+
+        List<String> eventTypes = api.getNotificationWebhookEventTypes();
+        RachioApiWebhook rachioApiWebhook = api.postNotificationWebhook(id, callbackUrl, externalId,
+                eventTypes);
+
+        return rachioApiWebhook.id();
     }
 }

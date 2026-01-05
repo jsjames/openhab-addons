@@ -21,6 +21,7 @@ import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.binding.rachio.internal.api.RachioApi;
 import org.openhab.binding.rachio.internal.api.RachioId;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiEvent;
+import org.openhab.binding.rachio.internal.utils.RachioUtils;
 import org.openhab.core.thing.Bridge;
 import org.openhab.core.thing.Thing;
 import org.openhab.core.thing.ThingStatus;
@@ -113,6 +114,10 @@ public abstract class AbstractRachioBridgeHandler<BH extends BaseBridgeHandler, 
         }
 
         return true;
+    }
+
+    public String getExternalId() {
+        return "OH_" + RachioUtils.getMD5Hash(getThing().getUID().getAsString());
     }
 
     @SuppressWarnings("unchecked")

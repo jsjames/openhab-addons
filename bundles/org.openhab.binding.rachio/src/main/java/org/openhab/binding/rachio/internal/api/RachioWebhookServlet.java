@@ -24,8 +24,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
-import org.openhab.binding.rachio.internal.api.dto.RachioApiEvent;
-import org.openhab.binding.rachio.internal.handler.RachioCloudConnectorHandler;
+import org.openhab.binding.rachio.internal.handler.AbstractRachioBridgeHandler;
 import org.osgi.service.http.HttpService;
 import org.osgi.service.http.NamespaceException;
 import org.slf4j.Logger;
@@ -47,9 +46,9 @@ public class RachioWebhookServlet extends HttpServlet {
     private final Gson gson;
 
     private final HttpService httpService;
-    private final RachioCloudConnectorHandler rachioBridgeHandler;
+    private final AbstractRachioBridgeHandler<?, ?, ?> rachioBridgeHandler;
 
-    public RachioWebhookServlet(HttpService httpService, RachioCloudConnectorHandler rachioBridgeHandler,
+    public RachioWebhookServlet(HttpService httpService, AbstractRachioBridgeHandler rachioBridgeHandler,
             RachioApi api) {
         this.httpService = httpService;
         this.rachioBridgeHandler = rachioBridgeHandler;
@@ -90,75 +89,75 @@ public class RachioWebhookServlet extends HttpServlet {
         }
     }
 
-    @Override
-    protected void service(@Nullable HttpServletRequest request, @Nullable HttpServletResponse resp)
-            throws ServletException, IOException {
-        if (request == null) {
-            logger.debug("RachioWebhook: doPost called with null request");
-            return;
-        }
+    // @Override
+    // protected void service(@Nullable HttpServletRequest request, @Nullable HttpServletResponse resp)
+    // throws ServletException, IOException {
+    // if (request == null) {
+    // logger.debug("RachioWebhook: doPost called with null request");
+    // return;
+    // }
 
-        JsonElement jsonContent = JsonParser.parseReader(request.getReader());
-        logger.debug("RachioWebhook: doPost called: {}", jsonContent.toString());
+    // JsonElement jsonContent = JsonParser.parseReader(request.getReader());
+    // logger.debug("RachioWebhook: doPost called: {}", jsonContent.toString());
 
-        if (resp != null) {
-            setHeaders(resp);
-            resp.getWriter().write("");
-        }
+    // if (resp != null) {
+    // setHeaders(resp);
+    // resp.getWriter().write("");
+    // }
 
-        String data = inputStreamToString(request);
-        try {
-            String ipAddress = request.getHeader("HTTP_X_FORWARDED_FOR");
-            ipAddress = (ipAddress != null) ? ipAddress : request.getRemoteAddr();
-            String path = request.getRequestURI();
+    // String data = inputStreamToString(request);
+    // try {
+    // String ipAddress = request.getHeader("HTTP_X_FORWARDED_FOR");
+    // ipAddress = (ipAddress != null) ? ipAddress : request.getRemoteAddr();
+    // String path = request.getRequestURI();
 
-            if (path == null) {
-                logger.debug("RachioWebhook: invalid request URI");
-                return;
-            }
+    // if (path == null) {
+    // logger.debug("RachioWebhook: invalid request URI");
+    // return;
+    // }
 
-            logger.trace("RachioWebhook: Reqeust from {}:{}{} ({}:{}, {})", ipAddress, request.getRemotePort(), path,
-                    request.getRemoteHost(), request.getServerPort(), request.getProtocol());
-            if (!path.equalsIgnoreCase(SERVLET_WEBHOOK_PATH)) {
-                logger.debug("RachioWebhook: Invalid request received - path = {}", path);
-                return;
-            }
+    // logger.trace("RachioWebhook: Reqeust from {}:{}{} ({}:{}, {})", ipAddress, request.getRemotePort(), path,
+    // request.getRemoteHost(), request.getServerPort(), request.getProtocol());
+    // if (!path.equalsIgnoreCase(SERVLET_WEBHOOK_PATH)) {
+    // logger.debug("RachioWebhook: Invalid request received - path = {}", path);
+    // return;
+    // }
 
-            // Fix malformed API v3 Event JSON
-            // TODO - do we still need this?
-            // data = data.replace("\"{", "{");
-            // data = data.replace("}\"", "}");
-            // data = data.replace("\\", "");
-            // data = data.replace("\"?\"", "'?'"); // fix json for"summary" : "<Device> has turned off and back on.
-            // This is usually not a problem. If power cycles continue, tap "?"/ above to
-            // contact Rachio Support.",
-            logger.trace("RachioWebhook: Data='{}'", data);
-            RachioApiEvent event = gson.fromJson(data, RachioApiEvent.class);
+    // // Fix malformed API v3 Event JSON
+    // // TODO - do we still need this?
+    // // data = data.replace("\"{", "{");
+    // // data = data.replace("}\"", "}");
+    // // data = data.replace("\\", "");
+    // // data = data.replace("\"?\"", "'?'"); // fix json for"summary" : "<Device> has turned off and back on.
+    // // This is usually not a problem. If power cycles continue, tap "?"/ above to
+    // // contact Rachio Support.",
+    // logger.trace("RachioWebhook: Data='{}'", data);
+    // RachioApiEvent event = gson.fromJson(data, RachioApiEvent.class);
 
-            if (event == null) {
-                logger.error("Invalid event JSON");
-                return;
-            }
+    // if (event == null) {
+    // logger.error("Invalid event JSON");
+    // return;
+    // }
 
-            // logger.trace("RachioEvent {}.{} for device '{}': {}", event.category(), event.type(), event.deviceId(),
-            // event.summary());
-            // TODO
-            // event.apiResult.setRateLimit(request.getHeader(RACHIO_JSON_RATE_LIMIT),
-            // request.getHeader(RACHIO_JSON_RATE_REMAINING), request.getHeader(RACHIO_JSON_RATE_RESET));
+    // // logger.trace("RachioEvent {}.{} for device '{}': {}", event.category(), event.type(), event.deviceId(),
+    // // event.summary());
+    // // TODO
+    // // event.apiResult.setRateLimit(request.getHeader(RACHIO_JSON_RATE_LIMIT),
+    // // request.getHeader(RACHIO_JSON_RATE_REMAINING), request.getHeader(RACHIO_JSON_RATE_RESET));
 
-            if (!rachioBridgeHandler.webhookEvent(event)) {
-                logger.debug("RachioWebhook: Event-JSON='{}'", data);
-            }
-            return;
-        } catch (RuntimeException e) {
-            logger.debug("RachioWebhook: Exception processing callback: {}, data='{}'", e.getMessage(), data);
-        } finally {
-            if (resp != null) {
-                setHeaders(resp);
-                resp.getWriter().write("");
-            }
-        }
-    }
+    // if (!rachioBridgeHandler.webhookEvent(event)) {
+    // logger.debug("RachioWebhook: Event-JSON='{}'", data);
+    // }
+    // return;
+    // } catch (RuntimeException e) {
+    // logger.debug("RachioWebhook: Exception processing callback: {}, data='{}'", e.getMessage(), data);
+    // } finally {
+    // if (resp != null) {
+    // setHeaders(resp);
+    // resp.getWriter().write("");
+    // }
+    // }
+    // }
 
     private void setHeaders(HttpServletResponse response) {
         response.setCharacterEncoding(StandardCharsets.UTF_8.name());

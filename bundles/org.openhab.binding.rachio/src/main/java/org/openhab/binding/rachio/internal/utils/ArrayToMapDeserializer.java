@@ -57,14 +57,12 @@ public class ArrayToMapDeserializer {
      * @return a JsonDeserializer that converts JSON arrays to Maps
      */
     public static <K, V> JsonDeserializer<Map<K, V>> forArrayToMap(Function<V, K> keyExtractor, Class<V> valueClass) {
-
         return (json, typeOfT, context) -> deserializeArrayToMap(json, typeOfT, context, keyExtractor, valueClass);
     }
 
     private static <K, V> Map<K, V> deserializeArrayToMap(@Nullable JsonElement json, @Nullable Type typeOfT,
             @Nullable JsonDeserializationContext context, Function<V, K> keyExtractor, Class<V> valueClass)
             throws JsonParseException {
-
         if (json == null || !json.isJsonArray()) {
             throw new JsonParseException(
                     "Expected JSON array, got: " + (json == null ? "null" : json.getClass().getSimpleName()));

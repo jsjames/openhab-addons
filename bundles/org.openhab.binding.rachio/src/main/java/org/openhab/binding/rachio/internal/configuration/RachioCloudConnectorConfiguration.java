@@ -27,5 +27,4 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 public class RachioCloudConnectorConfiguration {
     public String apikey = "";
     public int pollingInterval = DEFAULT_POLLING_INTERVAL_SEC;
-    public String callbackUrl = "";
 }

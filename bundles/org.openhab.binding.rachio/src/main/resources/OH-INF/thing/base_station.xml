@@ -21,6 +21,12 @@
 				<description>ID of rachio base station</description>
 				<required>true</required>
 			</parameter>
+			<parameter name="webhookCallbackUrl" type="text">
+				<label>Callback URL</label>
+				<description>Callback URL for the webhook. Note, as of this time, this must be a direct URL to the OpenHAB server and not through the OpenHAB cloud since the OpenHAB cloud does not support the new authenticaiton mechanism supported by the Rachio API.
+				</description>
+				<required>false</required>
+			</parameter>
 		</config-description>
 	</bridge-type>
 </thing:thing-descriptions>

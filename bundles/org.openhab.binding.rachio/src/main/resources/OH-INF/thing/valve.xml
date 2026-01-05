@@ -41,6 +41,12 @@
 				<description>Default run time for valve. If blank, run time is inherited from controller</description>
 				<unitLabel>min</unitLabel>
 			</parameter>
+			<parameter name="webhookCallbackUrl" type="text">
+				<label>Callback URL</label>
+				<description>https://username:password@home.myopenhab.org/rachio/webhook using the username and password for your
+					myopenhab.org account.</description>
+				<required>false</required>
+			</parameter>
 		</config-description>
 	</thing-type>
 

@@ -26,12 +26,6 @@
 				<required>false</required>
 				<default>120</default>
 			</parameter>
-			<parameter name="callbackUrl" type="text">
-				<label>Callback URL</label>
-				<description>https://username:password@home.myopenhab.org/rachio/webhook using the username and password for your
-					myopenhab.org account.</description>
-				<required>false</required>
-			</parameter>
 		</config-description>
 	</bridge-type>
 </thing:thing-descriptions>

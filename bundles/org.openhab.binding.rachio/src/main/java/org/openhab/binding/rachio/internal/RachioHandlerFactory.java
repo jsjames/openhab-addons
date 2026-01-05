@@ -78,7 +78,7 @@ public class RachioHandlerFactory extends BaseThingHandlerFactory {
             ThingTypeUID thingTypeUID = thing.getThingTypeUID();
             logger.trace("RachioHandlerFactory: Create thing handler for type {}", thingTypeUID.toString());
             if (THING_TYPE_CLOUD.equals(thingTypeUID)) {
-                return createBridgeHandler((Bridge) thing, httpClientFactory.getCommonHttpClient(), httpService);
+                return createBridgeHandler((Bridge) thing, httpClientFactory.getCommonHttpClient());
             }
 
             RachioCloudConnectorHandler lRachioBridgeHandler = cloudConnectorHandler;
@@ -95,7 +95,7 @@ public class RachioHandlerFactory extends BaseThingHandlerFactory {
 
             if (THING_TYPE_CONTROLLER.equals(thingTypeUID)) {
                 return new RachioControllerHandler((Bridge) thing, new RachioId.Device(id),
-                        lRachioBridgeHandler.getApi(), Objects.requireNonNull(cloudConnectorHandler));
+                        lRachioBridgeHandler.getApi(), Objects.requireNonNull(cloudConnectorHandler), httpService);
             } else if (THING_TYPE_ZONE.equals(thingTypeUID)) {
                 return new RachioZoneHandler(thing, new RachioId.Zone(id), lRachioBridgeHandler.getApi());
             } else if (THING_TYPE_BASE_STATION.equals(thingTypeUID)) {
@@ -113,14 +113,13 @@ public class RachioHandlerFactory extends BaseThingHandlerFactory {
     }
 
     @Nullable
-    private RachioCloudConnectorHandler createBridgeHandler(Bridge bridgeThing, HttpClient httpClient,
-            HttpService httpService) {
+    private RachioCloudConnectorHandler createBridgeHandler(Bridge bridgeThing, HttpClient httpClient) {
         if (cloudConnectorHandler != null) {
             logger.debug("RachioHandlerFactory: Duplicate bridge already exists.");
             return null;
         }
 
-        cloudConnectorHandler = new RachioCloudConnectorHandler(bridgeThing, httpClient, httpService);
+        cloudConnectorHandler = new RachioCloudConnectorHandler(bridgeThing, httpClient);
         return cloudConnectorHandler;
     }
 

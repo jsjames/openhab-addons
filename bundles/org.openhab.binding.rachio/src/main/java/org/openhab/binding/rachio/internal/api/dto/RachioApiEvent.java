@@ -131,7 +131,7 @@ public record RachioApiEvent( //
     ) implements Payload {
     }
 
-    static public final RachioApiEvent EMPTY = new RachioApiEvent(null, null, null, null, null, null);
+    public static final RachioApiEvent EMPTY = new RachioApiEvent(null, null, null, null, null, null);
 
     public static class GsonAdapter implements JsonDeserializer<RachioApiEvent> {
         private static final Map<String, Class<? extends Payload>> PAYLOAD_TYPE_MAP = Map.ofEntries(

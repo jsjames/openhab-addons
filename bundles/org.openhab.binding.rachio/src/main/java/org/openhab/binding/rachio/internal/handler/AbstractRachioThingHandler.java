@@ -49,7 +49,7 @@ public abstract class AbstractRachioThingHandler<BH extends AbstractRachioBridge
         }
     }
 
-    abstract public void goOnline();
+    public abstract void goOnline();
 
     public void goOffline(ThingStatusDetail thingStatusDetail, @Nullable String description) {
         updateStatus(ThingStatus.OFFLINE, thingStatusDetail, description);

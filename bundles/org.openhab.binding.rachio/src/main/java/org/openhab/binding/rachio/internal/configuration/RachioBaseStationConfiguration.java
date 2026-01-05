@@ -15,15 +15,14 @@ package org.openhab.binding.rachio.internal.configuration;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 
 /**
- * The {@link RachioControllerConfiguration} contains the binding configuration and default values. The field names
+ * The {@link RachioBaseStationConfiguration} contains the binding configuration and default values. The field names
  * represent the
  * configuration names, do not rename them if you don't intend to break the configuration interface.
  *
  * @author Jeff James - Initial contribution
  */
 @NonNullByDefault
-public class RachioControllerConfiguration {
+public class RachioBaseStationConfiguration {
     public String id = "";
-    public int defaultRunTime = 10;
     public String webhookCallbackUrl = "";
 }
