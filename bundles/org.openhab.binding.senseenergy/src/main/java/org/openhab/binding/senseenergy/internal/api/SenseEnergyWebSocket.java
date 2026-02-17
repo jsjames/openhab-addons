@@ -158,8 +158,6 @@ public class SenseEnergyWebSocket implements WebSocketListener {
             return;
         }
 
-        logger.debug("onWebSocketText");
-
         try {
             JsonObject jsonResponse = JsonParser.parseString(message).getAsJsonObject();
             String type = jsonResponse.get("type").getAsString();

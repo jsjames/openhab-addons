@@ -48,6 +48,7 @@
 			<parameter name="senseName" type="text">
 				<label>Sense Name</label>
 				<description>Name of device to be used by Sense.</description>
+				<required>true</required>
 			</parameter>
 		</config-description>
 	</thing-type>

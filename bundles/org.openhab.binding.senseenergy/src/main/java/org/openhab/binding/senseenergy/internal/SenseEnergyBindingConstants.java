@@ -57,6 +57,12 @@ public class SenseEnergyBindingConstants {
     public static final String CHANNEL_SOLAR_POWER = "solar-power";
     public static final String CHANNEL_DEVICES_UPDATED_TRIGGER = "devices-updated-trigger";
 
+    // Monitor Channel Types
+    public static final String CHANNEL_TYPE_POWER = "power";
+    public static final String CHANNEL_TYPE_SWITCH = "switch";
+    public static final String CHANNEL_TYPE_DIMMER = "dimmer";
+    public static final String CHANNEL_TYPE_STATE = "state";
+
     // Discovered Device Channel IDs
     public static final String CHANNEL_DEVICE_POWER = "device-power";
     public static final String CHANNEL_DEVICE_TRIGGER = "device-trigger";
@@ -79,6 +85,9 @@ public class SenseEnergyBindingConstants {
     public static final String CONFIG_PARAMETER_MAC = "mac";
     public static final String CONFIG_PARAMETER_POWER_LEVELS = "powerLevels";
     public static final String CONFIG_PARAMETER_SENSE_NAME = "senseName";
+    public static final String CONFIG_PARAMETER_ON_POWER = "onPower";
+    public static final String CONFIG_PARAMETER_OFF_POWER = "offPower";
+    public static final String CONFIG_PARAMETER_STATE_POWER_MAP = "statePowerMap";
 
     public static final String ACTION_OUTPUT_CONSUMPTION = "consumption";
     public static final String ACTION_OUTPUT_PRODUCTION = "production";

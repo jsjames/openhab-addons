@@ -17,23 +17,16 @@ import static org.openhab.binding.senseenergy.internal.SenseEnergyBindingConstan
 import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Random;
-
-import javax.measure.quantity.Power;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.openhab.binding.senseenergy.internal.api.dto.SenseEnergyDatagramGetRealtime;
 import org.openhab.binding.senseenergy.internal.api.dto.SenseEnergyDatagramGetSysInfo;
 import org.openhab.binding.senseenergy.internal.config.SenseEnergyProxyDeviceConfiguration;
-import org.openhab.binding.senseenergy.internal.handler.helpers.SenseEnergyPowerLevels;
+import org.openhab.binding.senseenergy.internal.handler.utils.PowerLevels;
+import org.openhab.binding.senseenergy.internal.handler.utils.ProxyPower;
 import org.openhab.core.config.core.Configuration;
-import org.openhab.core.library.types.OnOffType;
-import org.openhab.core.library.types.PercentType;
-import org.openhab.core.library.types.QuantityType;
-import org.openhab.core.library.types.StringType;
-import org.openhab.core.library.unit.Units;
 import org.openhab.core.thing.Bridge;
 import org.openhab.core.thing.ChannelUID;
 import org.openhab.core.thing.Thing;
@@ -63,9 +56,9 @@ public class SenseEnergyProxyDeviceHandler extends BaseThingHandler {
 
     private SenseEnergyProxyDeviceConfiguration config = new SenseEnergyProxyDeviceConfiguration();
 
-    SenseEnergyPowerLevels powerLevels = new SenseEnergyPowerLevels();
+    PowerLevels powerLevels = new PowerLevels();
 
-    private ElectricalData electricalData = new ElectricalData();
+    private ProxyPower powerMeasurement = new ProxyPower();
     private boolean selfConfigurationChange = false;
 
     public SenseEnergyProxyDeviceHandler(Thing thing) {
@@ -76,7 +69,7 @@ public class SenseEnergyProxyDeviceHandler extends BaseThingHandler {
     public void initialize() {
         config = getConfigAs(SenseEnergyProxyDeviceConfiguration.class);
 
-        electricalData.setVoltage(config.voltage);
+        powerMeasurement.setVoltage(config.voltage);
 
         Configuration c = null;
         if (config.macAddress.isBlank()) {
@@ -164,56 +157,7 @@ public class SenseEnergyProxyDeviceHandler extends BaseThingHandler {
             return;
         }
 
-        QuantityType<Power> qt;
-
-        switch (channelUID.getId()) {
-            case CHANNEL_PROXY_DEVICE_POWER:
-                if (command instanceof QuantityType<?> qtAbs) {
-                    if (qtAbs.getUnit().isCompatible(Units.WATT)) {
-                        // guaranteed to be compatible with Units.WATT
-                        electricalData.setPower(Objects.requireNonNull(qtAbs.toUnit(Units.WATT)).floatValue());
-                        logger.debug("Received power update: {} -> {}", command.toString(), electricalData.getPower());
-                    }
-                }
-
-                break;
-            case CHANNEL_PROXY_DEVICE_SWITCH:
-            case CHANNEL_PROXY_DEVICE_DIMMER:
-                if (command instanceof OnOffType onOffCommand) {
-                    qt = powerLevels.getLevel((onOffCommand == OnOffType.ON) ? 100 : 0);
-                    if (qt != null) {
-                        electricalData.setPower(qt.floatValue());
-                        logger.debug("Received switch update: {} -> {}", command.toString(), qt);
-                        return;
-                    } else {
-                        qt = powerLevels.getLevel((onOffCommand == OnOffType.ON) ? "ON" : "OFF");
-                        if (qt != null) {
-                            electricalData.setPower(qt.floatValue());
-                            logger.debug("Received switch update: {} -> {}", command.toString(), qt);
-                            return;
-                        }
-                        logger.debug("No power levels specified for command: {}", command);
-                    }
-                } else if (command instanceof PercentType percentType) {
-                    qt = powerLevels.getLevel(percentType.intValue());
-                    if (qt != null) {
-                        electricalData.setPower(qt.floatValue());
-                        logger.debug("Received dimmer update: {} -> {}", command.toString(), qt);
-                    }
-                }
-                break;
-
-            case CHANNEL_PROXY_DEVICE_STATE: {
-                if (command instanceof StringType stringCommand) {
-                    qt = powerLevels.getLevel(stringCommand.toString());
-                    if (qt != null) {
-                        electricalData.setPower(qt.floatValue());
-                        logger.debug("Received state update: {} -> {}", command.toString(), qt);
-                    }
-                }
-                break;
-            }
-        }
+        powerMeasurement.processCommand(command, powerLevels);
     }
 
     @Override
@@ -264,16 +208,16 @@ public class SenseEnergyProxyDeviceHandler extends BaseThingHandler {
         getSysInfo.alias = (config.senseName.isBlank()) ? getThing().getLabel() : config.senseName;
         getSysInfo.errorCode = 0;
 
-        getRealtime.current = Math.round(electricalData.getCurrent() * 10) / 10;
-        getRealtime.voltage = Math.round(electricalData.getVoltage());
-        getRealtime.power = Math.round(electricalData.getPower() * 10) / 10;
+        getRealtime.current = Math.round(powerMeasurement.getCurrent() * 10) / 10;
+        getRealtime.voltage = Math.round(powerMeasurement.getVoltage());
+        getRealtime.power = Math.round(powerMeasurement.getPower() * 10) / 10;
         getRealtime.errorCode = 0;
 
         return true;
     }
 
-    public ElectricalData getElectricalData() {
-        return this.electricalData;
+    public ProxyPower getElectricalData() {
+        return this.powerMeasurement;
     }
 
     public String getMAC() {
@@ -293,37 +237,5 @@ public class SenseEnergyProxyDeviceHandler extends BaseThingHandler {
         }
 
         return macAddress;
-    }
-
-    class ElectricalData {
-        private float power;
-        private float voltage;
-        private float current;
-
-        public void setVoltage(float voltage) {
-            this.voltage = voltage;
-        }
-
-        public void setCurrent(float current) {
-            this.current = current;
-            this.power = voltage * current;
-        }
-
-        public void setPower(float power) {
-            this.power = power;
-            this.current = (voltage != 0) ? power / voltage : 0;
-        }
-
-        public float getVoltage() {
-            return voltage;
-        }
-
-        public float getCurrent() {
-            return current;
-        }
-
-        public float getPower() {
-            return power;
-        }
     }
 }

@@ -17,6 +17,7 @@ import static org.openhab.binding.senseenergy.internal.SenseEnergyBindingConstan
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -49,6 +50,7 @@ import org.openhab.binding.senseenergy.internal.api.dto.SenseEnergyDatagramGetRe
 import org.openhab.binding.senseenergy.internal.api.dto.SenseEnergyDatagramGetSysInfo;
 import org.openhab.binding.senseenergy.internal.api.dto.SenseEnergyWebSocketDevice;
 import org.openhab.binding.senseenergy.internal.api.dto.SenseEnergyWebSocketRealtimeUpdate;
+import org.openhab.binding.senseenergy.internal.handler.utils.ProxyPower;
 import org.openhab.core.library.types.QuantityType;
 import org.openhab.core.library.unit.Units;
 import org.openhab.core.thing.Bridge;
@@ -97,6 +99,7 @@ public class SenseEnergyMonitorHandler extends BaseBridgeHandler
 
     private SenseEnergyWebSocket webSocket;
     private SenseEnergyDatagram datagram;
+    private Map<String, ProxyPower> proxyPowerMap = new HashMap<>();
 
     private final ChannelGroupTypeRegistry channelGroupTypeRegistry;
     private final ChannelTypeRegistry channelTypeRegistry;
@@ -259,6 +262,43 @@ public class SenseEnergyMonitorHandler extends BaseBridgeHandler
         datagram.stop();
     }
 
+    @Override
+    public void thingUpdated(Thing thing) {
+        final List<String> CHANNEL_TYPES = List.of(CHANNEL_TYPE_POWER, CHANNEL_TYPE_SWITCH, CHANNEL_TYPE_DIMMER,
+                CHANNEL_TYPE_STATE);
+        List<Channel> proxyChannelsNoGroup = new ArrayList<>();
+
+        logger.info("Thing updated: {}", thing.getUID());
+
+        thing.getChannels().forEach(channel -> {
+            ChannelType channelType = channelTypeRegistry.getChannelType(channel.getChannelTypeUID());
+            ChannelUID channelUID = channel.getUID();
+            String channelGroup = channelUID.getGroupId();
+
+            if (channelGroup == null && CHANNEL_TYPES.contains(channelType.getUID().getId())) {
+                proxyChannelsNoGroup.add(channel);
+            }
+        });
+
+        if (!proxyChannelsNoGroup.isEmpty()) {
+            ChannelGroupUID proxyGroupUID = new ChannelGroupUID(thing.getUID(),
+                    CHANNEL_GROUP_PROXY_DEVICES);
+            ThingBuilder thingBuilder = editThing();
+            proxyChannelsNoGroup.forEach(channel -> {
+                thingBuilder.withoutChannel(channel.getUID());
+
+                String channelID = channel.getUID().getId();
+                ChannelUID newChannelUID = new ChannelUID(proxyGroupUID, channelID);
+                channel.setUID(newChannelUID);
+                ChannelBuilder channelBuilder = ChannelBuilder.create(channel);
+                channelBuilder.withGroup(proxyGroupUID).build();
+            });
+            proxyChannelsNoGroup.forEach(channel -> 
+            thingBuilder.withChannels(proxyChannelsNoGroup);
+            updateThing(thingBuilder.build());
+        }
+    }
+
     public void updateProperties() {
         updateProperty(PROPERTY_MONITOR_SOLAR_CONFIGURED, Boolean.toString(solarConfigured));
 
@@ -318,6 +358,17 @@ public class SenseEnergyMonitorHandler extends BaseBridgeHandler
 
     @Override
     public void handleCommand(ChannelUID channelUID, Command command) {
+        Channel channel = getThing().getChannel(channelUID);
+        if (channel == null) {
+            logger.debug("Channel does not exist: {}", channelUID);
+            return;
+        }
+
+        if (channel.getChannelTypeUID() == null) {
+            logger.debug("Channel does not have a channel type: {}", channelUID);
+            return;
+        }
+
         if (command instanceof RefreshType) {
             String channelGroup = channelUID.getGroupId();
             if (channelGroup == null) {
@@ -326,11 +377,6 @@ public class SenseEnergyMonitorHandler extends BaseBridgeHandler
             }
 
             if (GENERATED_CHANNEL_GROUPS.contains(channelGroup)) {
-                Channel channel = getThing().getChannel(channelUID);
-                if (channel == null) {
-                    logger.debug("Channel does not exist: {}", channelUID);
-                    return;
-                }
 
                 String senseID = channel.getProperties().get(CHANNEL_PROPERTY_ID);
                 if (senseID == null) {

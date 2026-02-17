@@ -23,6 +23,7 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.openhab.binding.senseenergy.internal.handler.utils.PowerLevels;
 import org.openhab.core.library.types.QuantityType;
 
 /**
@@ -33,7 +34,7 @@ import org.openhab.core.library.types.QuantityType;
  */
 @NonNullByDefault
 class SenseEnergyPowerLevelsTest {
-    SenseEnergyPowerLevels powerLevels = new SenseEnergyPowerLevels();
+    PowerLevels powerLevels = new PowerLevels();
 
     @SuppressWarnings("null")
     void testParse(String s, int itemsLevel, int itemsState, String pretty, @Nullable List<Object> tests) {
