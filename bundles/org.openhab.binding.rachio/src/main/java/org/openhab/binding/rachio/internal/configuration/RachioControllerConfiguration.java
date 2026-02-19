@@ -25,5 +25,4 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 public class RachioControllerConfiguration {
     public String id = "";
     public int defaultRunTime = 10;
-    public String webhookCallbackUrl = "";
 }

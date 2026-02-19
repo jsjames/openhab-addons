@@ -24,5 +24,4 @@ import org.eclipse.jdt.annotation.NonNullByDefault;
 @NonNullByDefault
 public class RachioBaseStationConfiguration {
     public String id = "";
-    public String webhookCallbackUrl = "";
 }

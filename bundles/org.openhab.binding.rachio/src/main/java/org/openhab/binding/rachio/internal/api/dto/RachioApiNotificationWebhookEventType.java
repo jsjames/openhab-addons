@@ -23,5 +23,5 @@ public record RachioApiNotificationWebhookEventType( //
         RachioId.Webhook id, //
         String name, //
         String description, //
-        String type ) {
+        String type) {
 }

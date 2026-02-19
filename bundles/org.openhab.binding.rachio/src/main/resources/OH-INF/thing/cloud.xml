@@ -26,6 +26,29 @@
 				<required>false</required>
 				<default>120</default>
 			</parameter>
+			<parameter name="webhookVersion" type="text">
+				<label>Webhook Version</label>
+				<description>Version of webhook API to use. Legacy version only supports controllers but does support basic
+					authentication so that it can be used with myopenhab.org proxy server.
+					V2 version supports both controller and smart
+					hose but does not support basic authentication so it must be used with
+					a direct callback URL to your OpenHAB server
+					which comes with some security risks.</description>
+				<required>false</required>
+				<default>None</default>
+				<options>
+					<option value="None">None (no webhooks, polling only)</option>
+					<option value="Legacy">Legacy (controller only, basic authentication)</option>
+					<option value="V2">V2 (controller + smart hose, no basic authentication)</option>
+				</options>
+			</parameter>
+			<parameter name="webhookCallbackUrl" type="text">
+				<label>Callback URL</label>
+				<description>Callback URL for the new webhook. Rachio does not support basic authentication for this webhook and so
+					it must be a direct URL to your OpenHAB server which comes with some security risks.
+				</description>
+				<required>false</required>
+			</parameter>
 		</config-description>
 	</bridge-type>
 </thing:thing-descriptions>

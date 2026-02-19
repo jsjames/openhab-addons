@@ -39,7 +39,6 @@ import org.openhab.core.thing.ThingStatus;
 import org.openhab.core.thing.ThingStatusDetail;
 import org.openhab.core.thing.binding.ThingHandler;
 import org.openhab.core.types.Command;
-import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
@@ -50,8 +49,6 @@ import org.slf4j.LoggerFactory;
 @NonNullByDefault
 public class RachioBaseStationHandler
         extends AbstractRachioBridgeHandler<RachioCloudConnectorHandler, RachioId.BaseStation, RachioId.Valve> {
-    private final Logger logger = LoggerFactory.getLogger(RachioBaseStationHandler.class);
-
     RachioApiBaseStation rachioApiBaseStation = RachioApiBaseStation.EMPTY;
 
     private Map<RachioId.Valve, RachioValveHandler> valveHandlers = new HashMap<>();
@@ -60,7 +57,8 @@ public class RachioBaseStationHandler
 
     public RachioBaseStationHandler(final Bridge thing, final RachioId.BaseStation baseStationId, final RachioApi api,
             RachioCloudConnectorHandler cloudConnectorHandler) {
-        super(thing, baseStationId, api, cloudConnectorHandler);
+        super(thing, baseStationId, api, cloudConnectorHandler,
+                LoggerFactory.getLogger(RachioBaseStationHandler.class));
     }
 
     @Override

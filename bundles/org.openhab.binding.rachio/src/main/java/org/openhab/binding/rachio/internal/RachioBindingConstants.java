@@ -33,11 +33,11 @@ public class RachioBindingConstants {
     public static final ThingTypeUID THING_TYPE_BASE_STATION = new ThingTypeUID(BINDING_ID, "base-station");
     public static final ThingTypeUID THING_TYPE_VALVE = new ThingTypeUID(BINDING_ID, "valve");
 
-    // Config opntions (e.g. rachio.cfg)
     public static final String PARAM_APIKEY = "apikey";
     public static final String PARAM_POLLING_INTERVAL = "pollingInterval";
     public static final String PARAM_DEF_RUNTIME = "defaultRuntime";
-    public static final String PARAM_CALLBACK_URL = "callbackUrl";
+    public static final String PARAM_WEBHOOK_URL = "webhookCallbackUrl";
+    public static final String PARAM_NOTIFICATION_WEBHOOK_URL = "notificationWebhookCallbackUrl";
     public static final String PARAM_CLEAR_CALLBACK = "clearAllCallbacks";
 
     public static final String PARAM_ID = "id";

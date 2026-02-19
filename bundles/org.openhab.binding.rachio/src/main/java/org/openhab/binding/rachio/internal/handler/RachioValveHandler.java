@@ -90,15 +90,17 @@ public class RachioValveHandler extends AbstractRachioThingHandler<RachioBaseSta
         updateProperties();
         postChannelData(rachioApiValve, true, null);
 
-        try {
-            webhookId = getBridgeHandler().getCloudConnectorHandler().registerWebhook(id);
-        } catch (InterruptedException | TimeoutException | ExecutionException | RachioApiException
-                | RateLimitThrottleException e) {
-            updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
-                    "@text/valve-offline.webhook-registration-failed");
-            logger.error("Unable to register webhook for valve {}: {}", id.idString(), e.getMessage());
-            return;
-        }
+        /*
+         * try {
+         * webhookId = getBridgeHandler().getCloudConnectorHandler().registerWebhook(id);
+         * } catch (InterruptedException | TimeoutException | ExecutionException | RachioApiException
+         * | RateLimitThrottleException e) {
+         * updateStatus(ThingStatus.OFFLINE, ThingStatusDetail.COMMUNICATION_ERROR,
+         * "@text/valve-offline.webhook-registration-failed");
+         * logger.error("Unable to register webhook for valve {}: {}", id.idString(), e.getMessage());
+         * return;
+         * }
+         */
 
         updateStatus(ThingStatus.ONLINE);
     }

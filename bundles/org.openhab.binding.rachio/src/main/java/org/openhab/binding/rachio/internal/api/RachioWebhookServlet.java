@@ -24,7 +24,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
-import org.openhab.binding.rachio.internal.handler.AbstractRachioBridgeHandler;
+import org.openhab.binding.rachio.internal.handler.RachioCloudConnectorHandler;
 import org.osgi.service.http.HttpService;
 import org.osgi.service.http.NamespaceException;
 import org.slf4j.Logger;
@@ -46,12 +46,12 @@ public class RachioWebhookServlet extends HttpServlet {
     private final Gson gson;
 
     private final HttpService httpService;
-    private final AbstractRachioBridgeHandler<?, ?, ?> rachioBridgeHandler;
+    private final RachioCloudConnectorHandler cloudConnectorHandler;
 
-    public RachioWebhookServlet(HttpService httpService, AbstractRachioBridgeHandler rachioBridgeHandler,
+    public RachioWebhookServlet(HttpService httpService, RachioCloudConnectorHandler cloudConnectorHandler,
             RachioApi api) {
         this.httpService = httpService;
-        this.rachioBridgeHandler = rachioBridgeHandler;
+        this.cloudConnectorHandler = cloudConnectorHandler;
         this.gson = api.getGson();
         try {
             httpService.registerServlet(SERVLET_WEBHOOK_PATH, this, null, httpService.createDefaultHttpContext());

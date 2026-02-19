@@ -50,6 +50,7 @@ import org.openhab.core.thing.binding.BaseBridgeHandler;
 import org.openhab.core.thing.binding.ThingHandler;
 import org.openhab.core.thing.binding.ThingHandlerService;
 import org.openhab.core.types.Command;
+import org.osgi.service.http.HttpService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -76,16 +77,19 @@ public class RachioCloudConnectorHandler extends BaseBridgeHandler {
     private Map<RachioId.BaseStation, RachioBaseStationHandler> baseStationHandlers = new HashMap<>();
 
     @Nullable
-    RachioWebhookServlet rachioWebhookServlet;
+    private RachioWebhookServlet rachioWebhookServlet;
+    private final HttpService httpService;
 
     @Nullable
     private ScheduledFuture<?> pollingJob;
     private boolean jobPending = false;
 
-    public RachioCloudConnectorHandler(final Bridge bridge, HttpClient httpClient) {
+    public RachioCloudConnectorHandler(final Bridge bridge, HttpClient httpClient, HttpService httpService) {
         super(bridge);
         api = new RachioApi(httpClient);
         config = getConfigAs(RachioCloudConnectorConfiguration.class);
+        this.httpService = httpService;
+        this.supportsLegacyWebhooks = true;
     }
 
     @Override
@@ -101,6 +105,8 @@ public class RachioCloudConnectorHandler extends BaseBridgeHandler {
             logger.debug("RachioCloud: Connecting to Rachio Cloud");
             api.initialize(config.apikey);
             personId = api.getPersonId();
+
+            connectWebhook();
 
             updateProperties();
             updateStatus(ThingStatus.ONLINE);
@@ -327,6 +333,32 @@ public class RachioCloudConnectorHandler extends BaseBridgeHandler {
         return rachioBaseStations.get(id);
     }
 
+    public boolean connectWebhook() {
+        if (config.webhookVersion.equalsIgnoreCase("None")) {
+            logger.debug("RachioCloud: Webhook version set to None, skipping webhook setup");
+            return false;
+        }
+
+        if (config.webhookCallbackUrl == null || config.webhookCallbackUrl.isEmpty()) {
+            logger.debug("RachioCloud: No callback URL configured, skipping webhook setup");
+            return false;
+        }
+
+        if (rachioWebhookServlet != null) {
+            logger.debug("RachioCloud: Webhook servlet already registered");
+            return true;
+        }
+
+        try {
+            rachioWebhookServlet = new RachioWebhookServlet(httpService, this, api);
+            logger.debug("RachioCloud: Registered webhook servlet");
+            return true;
+        } catch (Exception e) {
+            logger.error("RachioCloud: Failed to register webhook servlet: {}", e.toString());
+            return false;
+        }
+    }
+
     /**
      * Handle inbound Webhook event (dispatch to device handler)
      *
@@ -407,6 +439,7 @@ public class RachioCloudConnectorHandler extends BaseBridgeHandler {
 
         if (rachioWebhookServlet != null) {
             rachioWebhookServlet.dispose();
+            rachioWebhookServlet = null;
         }
 
         // TODO getApi().deleteAllWebhooks();
@@ -416,6 +449,19 @@ public class RachioCloudConnectorHandler extends BaseBridgeHandler {
             job.cancel(true);
             pollingJob = null;
         }
+    }
+
+    public boolean isPollingMode() {
+        return config.webhookVersion.equalsIgnoreCase("None") || config.webhookCallbackUrl == null
+                || config.webhookCallbackUrl.isEmpty();
+    }
+
+    public String getWebhookVersion() {
+        return config.webhookVersion;
+    }
+
+    public String getWebhookCallbackUrl() {
+        return RachioUtils.enocdeUri(config.webhookCallbackUrl);
     }
 
     public RachioApi getApi() {

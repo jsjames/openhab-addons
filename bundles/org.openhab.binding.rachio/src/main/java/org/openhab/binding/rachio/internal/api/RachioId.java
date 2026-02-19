@@ -63,6 +63,10 @@ public class RachioId {
         public static final Webhook EMPTY = new Webhook("");
     }
 
+    public record NotificationWebhook(@NonNull String idString) implements Id {
+        public static final NotificationWebhook EMPTY = new NotificationWebhook("");
+    }
+
     public record Program(@NonNull String idString) implements Id {
         public static final Program EMPTY = new Program("");
     }
@@ -86,6 +90,7 @@ public class RachioId {
             case "PROGRAM" -> new Program(idString);
             case "VALVE" -> new Valve(idString);
             case "BASESTATION" -> new BaseStation(idString);
+            case "NOTIFICATIONWEBHOOK" -> new NotificationWebhook(idString);
             default -> throw new IllegalArgumentException("Unknown Rachio ID type: " + type);
         };
     }

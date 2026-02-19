@@ -53,11 +53,12 @@ public record RachioApiWebhook( //
 
             JsonArray eventTypesArray = jsonObject.getAsJsonArray("eventTypes");
             List<?> eventTypes = context.deserialize(eventTypesArray, List.class);
-            if(!(eventTypes.get(0) instanceof String)) {
-                eventTypes = eventTypes.stream().map((e) -> ((JsonElement) e).getAsJsonObject().get("name").getAsString()).collect(Collectors.toList());
+            if (!(eventTypes.get(0) instanceof String)) {
+                eventTypes = eventTypes.stream()
+                        .map((e) -> ((JsonElement) e).getAsJsonObject().get("name").getAsString())
+                        .collect(Collectors.toList());
             }
 
-            // resoureIdObject does not exist as a field in notification style webhooks
             JsonObject resourceIdObject = jsonObject.getAsJsonObject("resourceId");
 
             // convert separate parameters of resourceId field to a RachioId.Id type

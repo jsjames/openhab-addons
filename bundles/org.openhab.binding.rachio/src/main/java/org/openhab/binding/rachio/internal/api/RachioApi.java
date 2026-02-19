@@ -42,6 +42,7 @@ import org.openhab.binding.rachio.internal.api.dto.RachioApiCurrentSchedule;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiDevice;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiEvent;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiEventType;
+import org.openhab.binding.rachio.internal.api.dto.RachioApiNotificationWebhook;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiNotificationWebhookEventType;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiPerson;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiScheduleRule;
@@ -308,45 +309,62 @@ public class RachioApi {
         sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
     }
 
-    public List<RachioApiNotificationWebhookEventType> getNotificationWebhookEventTypes() throws InterruptedException, TimeoutException, ExecutionException, RachioApiException, RateLimitThrottleException {
+    // Legacy Notification Webhooks
+    public List<RachioApiNotificationWebhookEventType> getNotificationWebhookEventTypes() throws InterruptedException,
+            TimeoutException, ExecutionException, RachioApiException, RateLimitThrottleException {
         logger.debug("getNotificationWebhookEventTypes");
         Request request = httpClient.newRequest(URL_GET_NOTIFICATION_WEBHOOK_EVENT_TYPES).method(HttpMethod.GET);
         ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
 
-        return apiRequireNonNull(
-               gson.fromJson(response.getContentAsString(),
-               new TypeToken<List<RachioApiNotificationWebhookEventType>>(){}.getType()));
+        return apiRequireNonNull(gson.fromJson(response.getContentAsString(),
+                new TypeToken<List<RachioApiNotificationWebhookEventType>>() {
+                }.getType()));
     }
 
-    public List<RachioApiWebhook> getNotificationDeviceWebhook(RachioId.Device deviceId) throws InterruptedException, TimeoutException, ExecutionException, RachioApiException, RateLimitThrottleException {
+    public List<RachioApiNotificationWebhook> getNotificationDeviceWebhook(RachioId.Device deviceId)
+            throws InterruptedException, TimeoutException, ExecutionException, RachioApiException,
+            RateLimitThrottleException {
         logger.debug("getNotificationDeviceWebhook for device '{}'", deviceId.idString());
         String url = String.format(URL_GET_NOTIFICATION_DEVICE_WEBHOOK, deviceId.idString());
         Request request = httpClient.newRequest(url).method(HttpMethod.GET);
         ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.LOW);
 
-        return apiRequireNonNull(
-               gson.fromJson(response.getContentAsString(),
-               new TypeToken<List<RachioApiWebhook>>(){}.getType()));
+        return apiRequireNonNull(gson.fromJson(response.getContentAsString(), new TypeToken<List<RachioApiWebhook>>() {
+        }.getType()));
     }
 
-    public void deleteNotificationWebhook(RachioId.Webhook webhookId) throws InterruptedException, TimeoutException, ExecutionException, RachioApiException, RateLimitThrottleException {
+    public RachioApiWebhook getNotificationWebhook(RachioId.Webhook webhookId) throws InterruptedException,
+            TimeoutException, ExecutionException, RachioApiException, RateLimitThrottleException {
+        logger.debug("getNotificationWebhook for webhook '{}'", webhookId.idString());
+        String url = String.format(URL_GET_NOTIFICATION_WEBHOOK, webhookId.idString());
+        Request request = httpClient.newRequest(url).method(HttpMethod.GET);
+        ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.LOW);
+
+        return apiRequireNonNull(gson.fromJson(response.getContentAsString(), RachioApiWebhook.class));
+    }
+
+    public void deleteNotificationWebhook(RachioId.NotificationWebhook webhookId) throws InterruptedException,
+            TimeoutException, ExecutionException, RachioApiException, RateLimitThrottleException {
         logger.debug("deleteNotificationWebhook for webhook '{}'", webhookId.idString());
         String url = String.format(URL_DEL_NOTIFICATION_WEBHOOK, webhookId.idString());
         Request request = httpClient.newRequest(url).method(HttpMethod.DELETE);
         sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
     }
-    
-    public RachioId.Webhook postNotificationWebhook(RachioId.Device deviceId, String callbackUrl, String externalId, List<String> eventTypes) throws InterruptedException, TimeoutException, ExecutionException, RachioApiException, RateLimitThrottleException {
+
+    public RachioId.Webhook postNotificationWebhook(RachioId.Device deviceId, String callbackUrl, String externalId,
+            List<String> eventTypes) throws InterruptedException, TimeoutException, ExecutionException,
+            RachioApiException, RateLimitThrottleException {
         logger.debug("postNotificationWebhook for device '{}'", deviceId.idString());
 
         RachioApiWebhook apiWebhook = new RachioApiWebhook(null, externalId, deviceId, callbackUrl, eventTypes);
         String bodyParamJson = gson.toJson(apiWebhook);
 
-        Request request = httpClient.newRequest(URL_POST_NOTIFICATION_WEBHOOK).method(HttpMethod.POST).content(
-                new StringContentProvider(CONTENT_TYPE_JSON, bodyParamJson, StandardCharsets.UTF_8));
+        Request request = httpClient.newRequest(URL_POST_NOTIFICATION_WEBHOOK).method(HttpMethod.POST)
+                .content(new StringContentProvider(CONTENT_TYPE_JSON, bodyParamJson, StandardCharsets.UTF_8));
         ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
 
-        RachioApiWebhook apiWebhookResponse = apiRequireNonNull(gson.fromJson(response.getContentAsString(), RachioApiWebhook.class));
+        RachioApiWebhook apiWebhookResponse = apiRequireNonNull(
+                gson.fromJson(response.getContentAsString(), RachioApiWebhook.class));
         return apiRequireNonNull(apiWebhookResponse.id());
     }
 
