@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010-2025 Contributors to the openHAB project
+ * Copyright (c) 2010-2026 Contributors to the openHAB project
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information.
@@ -54,7 +54,6 @@ public abstract class AbstractRachioBridgeHandler<BH extends BaseBridgeHandler, 
     protected Map<CH_ID, AbstractRachioThingHandler<?, ?>> childHandlers = new HashMap<>();
     @Nullable
     protected RachioId webhookId = null;
-    protected boolean supportsLegacyWebhooks = false;
 
     public AbstractRachioBridgeHandler(final Bridge thing, ID id, final RachioApi api,
             RachioCloudConnectorHandler cloudConnectorHandler, Logger logger) {
@@ -174,14 +173,14 @@ public abstract class AbstractRachioBridgeHandler<BH extends BaseBridgeHandler, 
             }
 
             if (webhookVersion.equals("Legacy")) {
-                if (!supportsLegacyWebhooks) {
+                if (!(this instanceof RachioControllerHandler)) {
                     logger.warn("Legacy webhooks are not supported by this handler, skipping webhook registration");
                     return;
                 }
 
                 List<RachioApiNotificationWebhookEventType> webhooks = api.getNotificationWebhookEventTypes();
 
-                logger.debug("Available legacy webhook event types:", webhooks);
+                logger.debug("Available legacy webhook event types: {}", webhooks);
 
                 // logger.debug("Registered legacy webhook with id {}", webhookId.idString());
             } else {

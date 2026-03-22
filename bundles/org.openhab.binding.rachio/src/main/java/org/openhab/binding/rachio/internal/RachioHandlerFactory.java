@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010-2025 Contributors to the openHAB project
+ * Copyright (c) 2010-2026 Contributors to the openHAB project
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information.
@@ -12,7 +12,13 @@
  */
 package org.openhab.binding.rachio.internal;
 
-import static org.openhab.binding.rachio.internal.RachioBindingConstants.*;
+import static org.openhab.binding.rachio.internal.RachioBindingConstants.BINDING_ID;
+import static org.openhab.binding.rachio.internal.RachioBindingConstants.PARAM_ID;
+import static org.openhab.binding.rachio.internal.RachioBindingConstants.THING_TYPE_BASE_STATION;
+import static org.openhab.binding.rachio.internal.RachioBindingConstants.THING_TYPE_CLOUD;
+import static org.openhab.binding.rachio.internal.RachioBindingConstants.THING_TYPE_CONTROLLER;
+import static org.openhab.binding.rachio.internal.RachioBindingConstants.THING_TYPE_VALVE;
+import static org.openhab.binding.rachio.internal.RachioBindingConstants.THING_TYPE_ZONE;
 
 import java.util.Objects;
 import java.util.Set;
