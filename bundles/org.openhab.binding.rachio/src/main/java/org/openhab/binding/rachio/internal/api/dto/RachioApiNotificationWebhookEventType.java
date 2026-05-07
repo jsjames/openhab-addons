@@ -13,15 +13,13 @@
 
 package org.openhab.binding.rachio.internal.api.dto;
 
-import org.openhab.binding.rachio.internal.api.RachioId;
-
 /**
  * The {@link RachioApiNotificationWebhookEventType } implements the interface to the Rachio cloud service (using http).
  *
  * @author Jeff James - Initial contribution
  */
 public record RachioApiNotificationWebhookEventType( //
-        RachioId.Webhook id, //
+        String id, //
         String name, //
         String description, //
         String type) {

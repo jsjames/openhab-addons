@@ -12,7 +12,7 @@
  */
 package org.openhab.binding.rachio.internal.api;
 
-import static org.openhab.binding.rachio.internal.RachioBindingConstants.*;
+import static org.openhab.binding.rachio.internal.RachioBindingConstants.CONTENT_TYPE_JSON;
 
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
@@ -66,6 +66,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
+import com.google.gson.annotations.SerializedName;
 import com.google.gson.reflect.TypeToken;
 
 /**
@@ -76,6 +77,16 @@ import com.google.gson.reflect.TypeToken;
 @NonNullByDefault
 public class RachioApi {
     private final Logger logger = Objects.requireNonNull(LoggerFactory.getLogger(RachioApi.class));
+
+    private record NotificationEventTypeId(String id) {
+    }
+
+    private record NotificationDeviceRef(RachioId.Device id) {
+    }
+
+    private record NotificationCreateBody(NotificationDeviceRef device, String externalId, String url,
+            List<NotificationEventTypeId> eventTypes) {
+    }
 
     private static final String URL_BASE = "https://api.rach.io/1/public/";
     private static final String URL_BASE2 = "https://cloud-rest.rach.io/";
@@ -152,26 +163,11 @@ public class RachioApi {
             @Nullable Type typeOfT,
             @Nullable JsonDeserializationContext context) -> json == null ? null : Instant.parse(json.getAsString());
 
-    // deserialize JsonArrays to HashMaps with the id as key
+    // custom deserializers for API objects to handle missing fields and provide better error handling
     private final Gson gson = Objects.requireNonNull(new GsonBuilder() //
             .registerTypeAdapter(Date.class, dateDeserializer) //
             .registerTypeAdapter(Instant.class, instantDeserializer) //
-            .registerTypeAdapter(RachioId.Person.class,
-                    new RachioId.RachioIdGsonAdapter<RachioId.Person>(RachioId.Person.class)) //
-            .registerTypeAdapter(RachioId.Zone.class,
-                    new RachioId.RachioIdGsonAdapter<RachioId.Zone>(RachioId.Zone.class)) //
-            .registerTypeAdapter(RachioId.Device.class,
-                    new RachioId.RachioIdGsonAdapter<RachioId.Device>(RachioId.Device.class)) //
-            .registerTypeAdapter(RachioId.Webhook.class,
-                    new RachioId.RachioIdGsonAdapter<RachioId.Webhook>(RachioId.Webhook.class)) //
-            .registerTypeAdapter(RachioId.BaseStation.class,
-                    new RachioId.RachioIdGsonAdapter<RachioId.BaseStation>(RachioId.BaseStation.class)) //
-            .registerTypeAdapter(RachioId.Valve.class,
-                    new RachioId.RachioIdGsonAdapter<RachioId.Valve>(RachioId.Valve.class)) //
-            .registerTypeAdapter(RachioId.Program.class,
-                    new RachioId.RachioIdGsonAdapter<RachioId.Program>(RachioId.Program.class)) //
-            .registerTypeAdapter(RachioId.Schedule.class,
-                    new RachioId.RachioIdGsonAdapter<RachioId.Schedule>(RachioId.Schedule.class)) //
+            .registerTypeAdapterFactory(new RachioId.RachioIdTypeAdapterFactory()) //
             .registerTypeAdapter(RachioApiEvent.class, new RachioApiEvent.GsonAdapter()) //
             .registerTypeAdapter(RachioApiWebhook.class, new RachioApiWebhook.GsonAdapter()) //
             .registerTypeAdapter(new TypeToken<Map<RachioId.Device, RachioApiDevice>>() {
@@ -329,18 +325,20 @@ public class RachioApi {
         Request request = httpClient.newRequest(url).method(HttpMethod.GET);
         ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.LOW);
 
-        return apiRequireNonNull(gson.fromJson(response.getContentAsString(), new TypeToken<List<RachioApiWebhook>>() {
-        }.getType()));
+        return apiRequireNonNull(
+                gson.fromJson(response.getContentAsString(), new TypeToken<List<RachioApiNotificationWebhook>>() {
+                }.getType()));
     }
 
-    public RachioApiWebhook getNotificationWebhook(RachioId.Webhook webhookId) throws InterruptedException,
-            TimeoutException, ExecutionException, RachioApiException, RateLimitThrottleException {
+    public RachioApiNotificationWebhook getNotificationWebhook(RachioId.NotificationWebhook webhookId)
+            throws InterruptedException, TimeoutException, ExecutionException, RachioApiException,
+            RateLimitThrottleException {
         logger.debug("getNotificationWebhook for webhook '{}'", webhookId.idString());
         String url = String.format(URL_GET_NOTIFICATION_WEBHOOK, webhookId.idString());
         Request request = httpClient.newRequest(url).method(HttpMethod.GET);
         ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.LOW);
 
-        return apiRequireNonNull(gson.fromJson(response.getContentAsString(), RachioApiWebhook.class));
+        return apiRequireNonNull(gson.fromJson(response.getContentAsString(), RachioApiNotificationWebhook.class));
     }
 
     public void deleteNotificationWebhook(RachioId.NotificationWebhook webhookId) throws InterruptedException,
@@ -351,20 +349,22 @@ public class RachioApi {
         sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
     }
 
-    public RachioId.Webhook postNotificationWebhook(RachioId.Device deviceId, String callbackUrl, String externalId,
-            List<String> eventTypes) throws InterruptedException, TimeoutException, ExecutionException,
-            RachioApiException, RateLimitThrottleException {
+    public RachioId.NotificationWebhook postNotificationWebhook(RachioId.Device deviceId, String callbackUrl,
+            String externalId, List<String> eventTypes) throws InterruptedException, TimeoutException,
+            ExecutionException, RachioApiException, RateLimitThrottleException {
         logger.debug("postNotificationWebhook for device '{}'", deviceId.idString());
 
-        RachioApiWebhook apiWebhook = new RachioApiWebhook(null, externalId, deviceId, callbackUrl, eventTypes);
-        String bodyParamJson = gson.toJson(apiWebhook);
+        @SuppressWarnings("null")
+        List<NotificationEventTypeId> eventTypeIds = eventTypes.stream().map(NotificationEventTypeId::new).toList();
+        String bodyParamJson = gson.toJson(new NotificationCreateBody(new NotificationDeviceRef(deviceId), externalId,
+                callbackUrl, Objects.requireNonNull(eventTypeIds)));
 
         Request request = httpClient.newRequest(URL_POST_NOTIFICATION_WEBHOOK).method(HttpMethod.POST)
                 .content(new StringContentProvider(CONTENT_TYPE_JSON, bodyParamJson, StandardCharsets.UTF_8));
         ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
 
-        RachioApiWebhook apiWebhookResponse = apiRequireNonNull(
-                gson.fromJson(response.getContentAsString(), RachioApiWebhook.class));
+        RachioApiNotificationWebhook apiWebhookResponse = apiRequireNonNull(
+                gson.fromJson(response.getContentAsString(), RachioApiNotificationWebhook.class));
         return apiRequireNonNull(apiWebhookResponse.id());
     }
 
@@ -497,42 +497,30 @@ public class RachioApi {
     /*
      * WEBHOOK SERVICE API
      */
-    public RachioApiWebhook createWebhook(RachioId.Id id, String callbackUri, String externalId,
-            List<String> eventTypes) throws JsonSyntaxException, RachioApiException, InterruptedException,
-            TimeoutException, ExecutionException, RateLimitThrottleException {
-        RachioApiWebhook webhook = new RachioApiWebhook(null, externalId, id, callbackUri, eventTypes);
-
-        logger.trace("REQUEST BODY: {}", gson.toJson(webhook));
-
-        Request request = httpClient.newRequest(URL_POST_CREATE_WEBHOOK).method(HttpMethod.POST)
-                .content(new StringContentProvider(CONTENT_TYPE_JSON, gson.toJson(webhook), StandardCharsets.UTF_8));
-        ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
-
-        JsonElement jsonWebhook = JsonParser.parseString(response.getContentAsString()).getAsJsonObject()
-                .get("webhook");
-
-        return apiRequireNonNull(gson.fromJson(jsonWebhook, RachioApiWebhook.class));
-    }
-
-    public RachioApiWebhook createWebhook2(RachioId.Id id, String callbackUri, String externalId)
+    public RachioApiWebhook createWebhook(RachioId.Id id, String url, String externalId, List<String> eventTypes)
             throws JsonSyntaxException, RachioApiException, InterruptedException, TimeoutException, ExecutionException,
             RateLimitThrottleException {
-        // RachioApiWebhookResourceID resourceId = new RachioApiWebhookResourceID(id);
-        // RachioApiWebhook webhook = new RachioApiWebhook(null, externalId, resourceId, callbackUri, eventTypes);
+        record ResourceRef(@SerializedName("valve_id") RachioId.@Nullable Valve valveId,
+                @SerializedName("irrigation_controller_id") RachioId.@Nullable Device irrigationControllerId,
+                @SerializedName("program_id") RachioId.@Nullable Program programId) {
+        }
+        record CreateBody(@SerializedName("resource_id") ResourceRef resourceId,
+                @SerializedName("external_id") String externalId, String url,
+                @SerializedName("event_types") List<String> eventTypes) {
+        }
 
-        String jsonData = "{ " + "\"device\":{\"id\":\"" + id.idString() + "\"}, " + "\"externalId\" : \"" + externalId
-                + "\", " + "\"url\" : \"" + callbackUri + "\", " + "\"eventTypes\" : [" + "{\"id\" : \""
-                + WHE_DEVICE_STATUS + "\"}, " + "{\"id\" : \"" + WHE_RAIN_DELAY + "\"}, " + "{\"id\" : \""
-                + WEATHER_INTELLIGENCE + "\"}, " + "{\"id\" : \"" + WHE_WATER_BUDGET + "\"}, " + "{\"id\" : \""
-                + WHE_ZONE_DELTA + "\"}, " + "{\"id\" : \"" + WHE_SCHEDULE_STATUS + "\"}, " + "{\"id\" : \""
-                + WHE_ZONE_STATUS + "\"}, " + "{\"id\" : \"" + WHE_RAIN_SENSOR_DETECTION + "\"}, " + "{\"id\" : \""
-                + WHE_DELTA + "\"} " + "]" + "}";
+        ResourceRef resourceRef = switch (id) {
+            case RachioId.Device deviceId -> new ResourceRef(null, deviceId, null);
+            case RachioId.Valve valveId -> new ResourceRef(valveId, null, null);
+            case RachioId.Program programId -> new ResourceRef(null, null, programId);
+            default -> throw new IllegalArgumentException("Unsupported RachioId type: " + id.getClass());
+        };
 
-        logger.trace("REQUEST BODY: {}", jsonData);
+        String body = gson.toJson(new CreateBody(resourceRef, externalId, url, Objects.requireNonNull(eventTypes)));
+        logger.trace("REQUEST BODY: {}", body);
 
-        Request request = httpClient.newRequest("https://api.rach.io/1/public/notification/webhook")
-                .method(HttpMethod.POST)
-                .content(new StringContentProvider(CONTENT_TYPE_JSON, jsonData, StandardCharsets.UTF_8));
+        Request request = httpClient.newRequest(URL_POST_CREATE_WEBHOOK).method(HttpMethod.POST)
+                .content(new StringContentProvider(CONTENT_TYPE_JSON, body, StandardCharsets.UTF_8));
         ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
 
         JsonElement jsonWebhook = JsonParser.parseString(response.getContentAsString()).getAsJsonObject()
@@ -540,6 +528,57 @@ public class RachioApi {
 
         return apiRequireNonNull(gson.fromJson(jsonWebhook, RachioApiWebhook.class));
     }
+
+    public RachioApiNotificationWebhook createNotificationWebhook(RachioId.Device deviceId, String callbackUrl,
+            String externalId, List<RachioApiNotificationWebhookEventType> eventTypes) throws InterruptedException,
+            TimeoutException, ExecutionException, RachioApiException, RateLimitThrottleException {
+        record EventTypeId(String id) {
+        }
+        record DeviceRef(RachioId.Device id) {
+        }
+        record CreateBody(DeviceRef device, String externalId, String url, List<EventTypeId> eventTypes) {
+        }
+
+        @SuppressWarnings("null")
+        List<EventTypeId> eventTypeIds = eventTypes.stream().map(et -> new EventTypeId(et.id())).toList();
+        String body = gson.toJson(
+                new CreateBody(new DeviceRef(deviceId), externalId, callbackUrl, Objects.requireNonNull(eventTypeIds)));
+
+        Request request = httpClient.newRequest(URL_POST_NOTIFICATION_WEBHOOK).method(HttpMethod.POST)
+                .content(new StringContentProvider(CONTENT_TYPE_JSON, body, StandardCharsets.UTF_8));
+        ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
+
+        return apiRequireNonNull(gson.fromJson(response.getContentAsString(), RachioApiNotificationWebhook.class));
+    }
+
+    /*
+     * public RachioApiWebhook createWebhook2(RachioId.Id id, String callbackUri, String externalId)
+     * throws JsonSyntaxException, RachioApiException, InterruptedException, TimeoutException, ExecutionException,
+     * RateLimitThrottleException {
+     * // RachioApiWebhookResourceID resourceId = new RachioApiWebhookResourceID(id);
+     * // RachioApiWebhook webhook = new RachioApiWebhook(null, externalId, resourceId, callbackUri, eventTypes);
+     * 
+     * String jsonData = "{ " + "\"device\":{\"id\":\"" + id.idString() + "\"}, " + "\"externalId\" : \"" + externalId
+     * + "\", " + "\"url\" : \"" + callbackUri + "\", " + "\"eventTypes\" : [" + "{\"id\" : \""
+     * + WHE_DEVICE_STATUS + "\"}, " + "{\"id\" : \"" + WHE_RAIN_DELAY + "\"}, " + "{\"id\" : \""
+     * + WEATHER_INTELLIGENCE + "\"}, " + "{\"id\" : \"" + WHE_WATER_BUDGET + "\"}, " + "{\"id\" : \""
+     * + WHE_ZONE_DELTA + "\"}, " + "{\"id\" : \"" + WHE_SCHEDULE_STATUS + "\"}, " + "{\"id\" : \""
+     * + WHE_ZONE_STATUS + "\"}, " + "{\"id\" : \"" + WHE_RAIN_SENSOR_DETECTION + "\"}, " + "{\"id\" : \""
+     * + WHE_DELTA + "\"} " + "]" + "}";
+     * 
+     * logger.trace("REQUEST BODY: {}", jsonData);
+     * 
+     * Request request = httpClient.newRequest("https://api.rach.io/1/public/notification/webhook")
+     * .method(HttpMethod.POST)
+     * .content(new StringContentProvider(CONTENT_TYPE_JSON, jsonData, StandardCharsets.UTF_8));
+     * ContentResponse response = sendRequest(request, ClientRateLimitManager.PRIORITY.HI);
+     * 
+     * JsonElement jsonWebhook = JsonParser.parseString(response.getContentAsString()).getAsJsonObject()
+     * .get("webhook");
+     * 
+     * return apiRequireNonNull(gson.fromJson(jsonWebhook, RachioApiWebhook.class));
+     * }
+     */
 
     public List<RachioApiWebhook> getListWebhook(RachioId.Id rachioId) throws InterruptedException, TimeoutException,
             ExecutionException, RachioApiException, RateLimitThrottleException {

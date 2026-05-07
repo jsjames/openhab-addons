@@ -12,21 +12,11 @@
  */
 package org.openhab.binding.rachio.internal.api.dto;
 
-import java.lang.reflect.Type;
+import java.util.Date;
 import java.util.List;
-import java.util.stream.Collectors;
 
-import org.eclipse.jdt.annotation.NonNull;
 import org.openhab.binding.rachio.internal.api.RachioId;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonDeserializationContext;
-import com.google.gson.JsonDeserializer;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
-import com.google.gson.JsonSerializationContext;
-import com.google.gson.JsonSerializer;
 import com.google.gson.annotations.SerializedName;
 
 /**
@@ -36,46 +26,11 @@ import com.google.gson.annotations.SerializedName;
  */
 public record RachioApiNotificationWebhook( //
         RachioId.NotificationWebhook id, //
+        Date createDate, //
         @SerializedName(value = "external_id", alternate = "externalId") String externalId, //
         String url, //
-        @SerializedName(value = "event_types", alternate = "eventTypes") List<@NonNull String> eventTypes) {
+        @SerializedName(value = "event_types", alternate = "eventTypes") List<RachioApiNotificationWebhookEventType> eventTypes) {
 
-    public static class GsonAdapter
-            implements JsonDeserializer<RachioApiNotificationWebhook>, JsonSerializer<RachioApiNotificationWebhook> {
-        @Override
-        public RachioApiNotificationWebhook deserialize(JsonElement json, Type typeOfT,
-                JsonDeserializationContext context) throws JsonParseException {
-            JsonObject jsonObject = json.getAsJsonObject();
-
-            RachioId.NotificationWebhook id = context.deserialize(jsonObject.get("id"),
-                    RachioId.NotificationWebhook.class);
-            String externalId = context.deserialize(jsonObject.get("externalId"), String.class);
-            String url = context.deserialize(jsonObject.get("url"), String.class);
-
-            JsonArray eventTypesArray = jsonObject.getAsJsonArray("eventTypes");
-            List<?> eventTypes = context.deserialize(eventTypesArray, List.class);
-            if (!(eventTypes.get(0) instanceof String)) {
-                eventTypes = eventTypes.stream()
-                        .map((e) -> ((JsonElement) e).getAsJsonObject().get("name").getAsString())
-                        .collect(Collectors.toList());
-            }
-
-            @SuppressWarnings("unchecked")
-            List<@NonNull String> eventTypesCasted = (List<@NonNull String>) eventTypes;
-            return new RachioApiNotificationWebhook(id, externalId, url, eventTypesCasted);
-        }
-
-        public JsonElement serialize(RachioApiNotificationWebhook src, Type typeOfSrc,
-                JsonSerializationContext context) {
-            JsonObject jsonObject = new JsonObject();
-            jsonObject.add("id", context.serialize(src.id()));
-            jsonObject.add("externalId", context.serialize(src.externalId()));
-            jsonObject.add("url", context.serialize(src.url()));
-            jsonObject.add("eventTypes", context.serialize(src.eventTypes()));
-            return jsonObject;
-        }
-    }
-
-    public static final RachioApiNotificationWebhook EMPTY = new RachioApiNotificationWebhook(null, null, null,
+    public static final RachioApiNotificationWebhook EMPTY = new RachioApiNotificationWebhook(null, null, null, null,
             List.of());
 }

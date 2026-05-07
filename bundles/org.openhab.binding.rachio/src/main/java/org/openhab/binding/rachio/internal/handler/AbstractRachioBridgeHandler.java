@@ -25,6 +25,7 @@ import org.openhab.binding.rachio.internal.api.RachioApi;
 import org.openhab.binding.rachio.internal.api.RachioApiException;
 import org.openhab.binding.rachio.internal.api.RachioId;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiEvent;
+import org.openhab.binding.rachio.internal.api.dto.RachioApiEventType;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiNotificationWebhook;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiNotificationWebhookEventType;
 import org.openhab.binding.rachio.internal.api.dto.RachioApiWebhook;
@@ -52,8 +53,7 @@ public abstract class AbstractRachioBridgeHandler<BH extends BaseBridgeHandler, 
     protected final ID id;
     protected final RachioCloudConnectorHandler cloudConnectorHandler;
     protected Map<CH_ID, AbstractRachioThingHandler<?, ?>> childHandlers = new HashMap<>();
-    @Nullable
-    protected RachioId webhookId = null;
+    protected RachioId.@Nullable Id webhookId = null;
 
     public AbstractRachioBridgeHandler(final Bridge thing, ID id, final RachioApi api,
             RachioCloudConnectorHandler cloudConnectorHandler, Logger logger) {
@@ -159,47 +159,71 @@ public abstract class AbstractRachioBridgeHandler<BH extends BaseBridgeHandler, 
         return id;
     }
 
-    public void registerWebhook() {
+    public RachioId.@Nullable NotificationWebhook registerNotificationWebhooks() {
+        if (!(id instanceof RachioId.Device deviceId)) {
+            logger.error("Unsupported ID type for notification webhooks: {}", id.getClass().getSimpleName());
+            return null;
+        }
 
         try {
-            unregisterWebhooks();
-
-            final String webhookVersion = cloudConnectorHandler.getWebhookVersion();
-
-            if (webhookVersion.equals("None") || webhookVersion.isEmpty()
-                    || cloudConnectorHandler.getWebhookCallbackUrl().isEmpty()) {
-                logger.debug("Webhook version is set to None or empty, skipping webhook registration");
-                return;
-            }
-
-            if (webhookVersion.equals("Legacy")) {
-                if (!(this instanceof RachioControllerHandler)) {
-                    logger.warn("Legacy webhooks are not supported by this handler, skipping webhook registration");
-                    return;
-                }
-
-                List<RachioApiNotificationWebhookEventType> webhooks = api.getNotificationWebhookEventTypes();
-
-                logger.debug("Available legacy webhook event types: {}", webhooks);
-
-                // logger.debug("Registered legacy webhook with id {}", webhookId.idString());
-            } else {
-                // api.createV2Webhook(getExternalId(), cloudConnectorHandler.getWebhookCallbackUrl(), webhookVersion,
-                // getWebhookEventTypes());
-                // logger.debug("Registered webhook with id {}", webhookId.idString());
-            }
+            List<RachioApiNotificationWebhookEventType> webhooks = api.getNotificationWebhookEventTypes();
+            RachioApiNotificationWebhook notificationWebhook = api.createNotificationWebhook(deviceId,
+                    cloudConnectorHandler.getWebhookCallbackUrl(), getExternalId(), webhooks);
+            return Objects.requireNonNull(notificationWebhook.id(), "Notification webhook id");
         } catch (InterruptedException | ExecutionException | RachioApiException | TimeoutException
                 | RateLimitThrottleException e) {
             logger.error("Exception: {}", e.getLocalizedMessage());
         }
 
-        /*
-         * List<String> eventTypes = api.getNotificationWebhookEventTypes();
-         * RachioApiWebhook rachioApiWebhook = api.postNotificationWebhook(id, callbackUrl, externalId,
-         * eventTypes);
-         * 
-         * return rachioApiWebhook.id();
-         */
+        return null;
+    }
+
+    public RachioId.@Nullable Webhook registerV2Webhook() {
+        if (!(id instanceof RachioId.Device || id instanceof RachioId.Valve || id instanceof RachioId.Program)) {
+            logger.error("Unsupported ID type for v2 webhooks: {}", id.getClass().getSimpleName());
+            return null;
+        }
+
+        try {
+            List<RachioApiEventType> webhooks = api.getListWebhookEventTypes();
+            String targetResourceType = id instanceof RachioId.Device ? "device"
+                    : id instanceof RachioId.Valve ? "valve" : "program";
+
+            @SuppressWarnings("null")
+            List<String> eventTypes = webhooks.stream()
+                    .filter(t -> targetResourceType.equalsIgnoreCase(t.resourceType())).findFirst()
+                    .map(RachioApiEventType::eventTypes).orElse(List.of());
+
+            RachioApiWebhook webhook = api.createWebhook(id, cloudConnectorHandler.getWebhookCallbackUrl(),
+                    getExternalId(), Objects.requireNonNull(eventTypes));
+            return Objects.requireNonNull((RachioId.Webhook) webhook.id(), "Webhook id");
+        } catch (InterruptedException | ExecutionException | RachioApiException | TimeoutException
+                | RateLimitThrottleException e) {
+            logger.error("Exception: {}", e.getLocalizedMessage());
+        }
+        return null;
+    }
+
+    public void registerWebhook() {
+        unregisterWebhooks();
+
+        final String webhookVersion = cloudConnectorHandler.getWebhookVersion();
+
+        if (webhookVersion.equals("None") || webhookVersion.isEmpty()
+                || cloudConnectorHandler.getWebhookCallbackUrl().isEmpty()) {
+            logger.debug("Webhook version is set to None or empty, skipping webhook registration");
+            return;
+        }
+
+        if (webhookVersion.equals("Legacy")) {
+            if (!(this instanceof RachioControllerHandler)) {
+                logger.warn("Legacy webhooks are supported only for controller handlers, skipping registration");
+                return;
+            }
+            webhookId = registerNotificationWebhooks();
+        } else {
+            webhookId = registerV2Webhook();
+        }
     }
 
     public void unregisterWebhooks() {
@@ -209,8 +233,15 @@ public abstract class AbstractRachioBridgeHandler<BH extends BaseBridgeHandler, 
     }
 
     public void unregisterLegacyWebhook() {
+        if (!(this instanceof RachioControllerHandler)) {
+            return;
+        }
+        if (!(id instanceof RachioId.Device deviceId)) {
+            return;
+        }
+
         try {
-            List<RachioApiNotificationWebhook> webhooks = api.getNotificationDeviceWebhook((RachioId.Device) id);
+            List<RachioApiNotificationWebhook> webhooks = api.getNotificationDeviceWebhook(deviceId);
 
             for (RachioApiNotificationWebhook webhook : webhooks) {
                 logger.debug("Webhook: id='{}', url='{}', externalId='{}'", webhook.id(), webhook.url(),
@@ -218,7 +249,7 @@ public abstract class AbstractRachioBridgeHandler<BH extends BaseBridgeHandler, 
                 if (webhook.url().equals(cloudConnectorHandler.getWebhookCallbackUrl())
                         && webhook.externalId().equals(getExternalId())) {
                     logger.debug("The callback url '{}' is already registered -> delete", webhook.url());
-                    api.deleteNotificationWebhook(webhook.id());
+                    api.deleteNotificationWebhook(Objects.requireNonNull(webhook.id(), "Notification webhook id"));
                 }
             }
         } catch (InterruptedException | TimeoutException | ExecutionException | RachioApiException
@@ -237,7 +268,7 @@ public abstract class AbstractRachioBridgeHandler<BH extends BaseBridgeHandler, 
                 if (webhook.url().equals(cloudConnectorHandler.getWebhookCallbackUrl())
                         && webhook.externalId().equals(getExternalId())) {
                     logger.debug("The callback url '{}' is already registered -> delete", webhook.url());
-                    api.deleteWebhook((RachioId.Webhook) webhook.id());
+                    api.deleteWebhook(Objects.requireNonNull((RachioId.Webhook) webhook.id(), "Webhook id"));
                 }
             }
         } catch (InterruptedException | TimeoutException | ExecutionException | RachioApiException

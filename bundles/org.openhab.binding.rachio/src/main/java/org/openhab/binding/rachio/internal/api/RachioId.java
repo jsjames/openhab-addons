@@ -12,6 +12,7 @@
  */
 package org.openhab.binding.rachio.internal.api;
 
+import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Type;
 import java.util.Objects;
@@ -20,6 +21,7 @@ import org.eclipse.jdt.annotation.NonNull;
 import org.eclipse.jdt.annotation.NonNullByDefault;
 import org.eclipse.jdt.annotation.Nullable;
 
+import com.google.gson.Gson;
 import com.google.gson.JsonDeserializationContext;
 import com.google.gson.JsonDeserializer;
 import com.google.gson.JsonElement;
@@ -27,6 +29,12 @@ import com.google.gson.JsonNull;
 import com.google.gson.JsonParseException;
 import com.google.gson.JsonSerializationContext;
 import com.google.gson.JsonSerializer;
+import com.google.gson.TypeAdapter;
+import com.google.gson.TypeAdapterFactory;
+import com.google.gson.reflect.TypeToken;
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonToken;
+import com.google.gson.stream.JsonWriter;
 
 /**
  * The {@link RachioId} used to support type-checking for Rachio IDs
@@ -93,6 +101,41 @@ public class RachioId {
             case "NOTIFICATIONWEBHOOK" -> new NotificationWebhook(idString);
             default -> throw new IllegalArgumentException("Unknown Rachio ID type: " + type);
         };
+    }
+
+    public static class RachioIdTypeAdapterFactory implements TypeAdapterFactory {
+        @NonNullByDefault({})
+        @SuppressWarnings({ "unchecked", "null" })
+        @Override
+        public <T> @Nullable TypeAdapter<T> create(Gson gson, TypeToken<T> typeToken) {
+            Class<? super T> rawType = typeToken.getRawType();
+            if (!Id.class.isAssignableFrom(rawType) || rawType == Id.class) {
+                return null;
+            }
+            return (TypeAdapter<T>) new TypeAdapter<Id>() {
+                @Override
+                public void write(JsonWriter out, Id value) throws IOException {
+                    out.value(value.idString());
+                }
+
+                @Override
+                public Id read(JsonReader in) throws IOException {
+                    if (in.peek() == JsonToken.NULL) {
+                        in.nextNull();
+                        throw new JsonParseException("Unexpected null for " + rawType.getSimpleName());
+                    }
+                    String idString = in.nextString();
+                    try {
+                        return Objects.requireNonNull(
+                                (Id) rawType.getDeclaredConstructor(String.class).newInstance(idString));
+                    } catch (InstantiationException | IllegalAccessException | InvocationTargetException
+                            | NoSuchMethodException e) {
+                        throw new JsonParseException(
+                                "Failed to deserialize " + rawType.getSimpleName() + ": " + e.getMessage(), e);
+                    }
+                }
+            };
+        }
     }
 
     public static class RachioIdGsonAdapter<T extends Id> implements JsonDeserializer<T>, JsonSerializer<T> {
